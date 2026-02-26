@@ -14,3 +14,5 @@ dist/
 build/
 *.egg-info/
 lex_pgdata/
+qdrant_data/
+.pytest_cache/
