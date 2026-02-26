@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # LLM (Agnóstico)
     LLM_API_KEY: str
     LLM_MODEL: str = "gpt-4o" # o "deepseek-coder"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+
+    # Vector Store (Qdrant)
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
 
     # Flags de Seguridad
     SECRET_KEY: str

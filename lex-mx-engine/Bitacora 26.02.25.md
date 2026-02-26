@@ -39,6 +39,7 @@ Se han implementado los endpoints comerciales fundamentales:
 | `GET /api/v1/normas/{id}/estructura` | ✅ Operativo | **Time Travel API**. Construye el árbol jerárquico completo (Títulos > Capítulos > Artículos) ensamblando únicamente las versiones del texto vigentes en la `?fecha=` solicitada. |
 | `GET /api/v1/history/articulos/{uuid}/historial` | ✅ Operativo | Auditoría Forense. Devuelve la línea de vida completa de un artículo (pasado, presente y futuro aprobado). |
 | `POST /api/v1/compliance/check` | ✅ Operativo | Motor de Reglas (`json-logic`). Recibe metadata de una transacción de un ERP, busca las reglas fiscales vigentes hoy, y devuelve si es *Compliant* o las violaciones encontradas. |
+| `POST /api/v1/compliance/evaluate` | ✅ Operativo | **Motor Temporal Universal**. Endpoint agnóstico con Time-Travel que evalúa reglas dinámicas (ej. aranceles de microchips) basadas en la `fecha_operacion` de la transacción enviada por el ERP. |
 
 ### C. Componentes del Motor Interno (El Backoffice) 🏗️
 
@@ -49,10 +50,11 @@ Se han implementado los endpoints comerciales fundamentales:
 | **Resolver Legal** | `services/resolver.py` | Traduce texto y rutas jerárquicas ("Titulo II > Cap I > Art 27") a UUID interno. |
 | **Motor de Parcheo** | `pipeline/patcher.py` | Ejecuta la cirugía atómica de cerrar vigencias pasadas y abrir futuras. |
 | **Cliente CLI** | `scripts/lex_cli.py` | Cliente interactivo de terminal para visualizar el árbol de las leyes consumiendo la propia API. |
+| **Vector Store (Qdrant)** | `infrastructure/vector_store.py` | **Ala Semántica (RAG Definitivo)**. Almacena embeddings de los artículos legales filtrables estrictamente por vigencia temporal para búsquedas de IA sin alucinaciones. |
 
 ---
 
-## 3️⃣ Diagrama de Arquitectura Actualizado
+## 3️⃣ Diagrama de Arquitectura Actualizado (Fase 2)
 
 ```mermaid
 graph TD
@@ -62,15 +64,20 @@ graph TD
     C -->|UnidadResolver| D[Patcher Engine]
     D -->|Transacción Atómica| E[(PostgreSQL Temporal)]
     
+    %% VECTORIZACIÓN (El Ala Semántica)
+    E -->|Sincronización de Contexto Enriquecido| Q[(Qdrant Vector DB)]
+    
     %% CONSUMO (Lex API)
     E -->|Árbol Jerárquico| F[API REST: /estructura]
-    E -->|Reglas Activas| I[API REST: /check]
+    E -->|Reglas Universales (Time-Travel)| I[API REST: /evaluate]
     E -->|Auditoría| K[API REST: /historial]
+    Q -->|Búsqueda Semántica Strict-Time| R[API Vectorial / RAG]
     
     %% CLIENTES FINALES
     F -->|JSON Estructurado Time-Travel| H[Frontend Visualizador / Sistemas de Consulta]
-    I -->|JSONLogic| J[ERP / CRM / Software Contable]
+    I -->|JSONLogic Universal| J[ERP / Banca / Aduanas Globales]
     K -->|Auditoría Histórica| L[Firmas Legales / Auditores]
+    R -->|IA Contextualizada| S[Agentes IA / LegalTech Asistentes]
 ```
 
 ---
