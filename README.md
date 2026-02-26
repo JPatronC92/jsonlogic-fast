@@ -1,84 +1,111 @@
 # Tempus Rule Engine ⏳⚛️
 
-**The Universal, Time-Travel Compliance Infrastructure.**
+**The Universal, Deterministic & Time-Travel Compliance Infrastructure.**
 
-> Formally known as Lex MX Engine, this project has pivoted from a legal-specific tool to a **domain-agnostic, universal rule engine**. 
+[![CI](https://github.com/JPatronC92/Lex-API-Mx/actions/workflows/main.yml/badge.svg)](https://github.com/JPatronC92/Lex-API-Mx/actions/workflows/main.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Tempus Rule Engine allows you to define complex business, legal, or compliance rules (using `json-logic`), version them precisely in time using PostgreSQL's advanced temporal features, and evaluate transactions deterministically against the exact rules that were active at a specific millisecond in history.
+Tempus is a high-performance, domain-agnostic rule engine designed for mission-critical compliance. It treats business logic, legal requirements, and technical constraints as **versioned source code**, allowing you to evaluate transactions against the exact rules that were active at any specific point in history—or even future rules already approved.
 
-It is designed for high-throughput, mission-critical systems like:
-* **Global Customs & Logistics:** Validating tariffs and permits (e.g., HS Codes).
-* **Fintech & Banking:** Transaction monitoring and dynamic compliance over time.
-* **Healthcare:** Evaluating claims against versioned medical policies.
-* **LegalTech:** Auditing historical contracts against the law of the time.
+---
 
-## 🌟 Core Superpowers
+## 🚀 Why Tempus?
 
-1. **🕰️ Time-Travel (Temporal Validity):** Rules don't just exist; they exist *in a specific time range*. We use PostgreSQL's `DATERANGE` and `ExcludeConstraint` (GiST indexes) to mathematically guarantee that rule versions never overlap. 
-2. **🧠 Deterministic Evaluation:** The `ComplianceEngine` uses `json-logic` to evaluate inputs. Given the same transaction and the same date, the result is mathematically guaranteed to be identical forever. Zero hallucinations.
-3. **🔍 Semantic Wing (Qdrant RAG):** Built-in integration with **Qdrant Vector Database**. Texts or human-readable rule definitions are embedded (OpenAI/LiteLLM) along with their temporal boundaries. This allows AI agents to do "Strict-Time Semantic Search" (e.g., *"Find rules about microchip imports active in March 2026"*).
+In complex industries (Fintech, Global Trade, Health), rules change constantly. Most systems only know the "current" state of a rule. **Tempus knows the entire timeline.**
+
+### 🌟 Core Superpowers
+
+*   **🕰️ Absolute Time-Travel:** Leveraging PostgreSQL's `DATERANGE` and `ExcludeConstraint` (GiST), Tempus mathematically guarantees that rule versions never overlap. You can audit a 2022 transaction against 2022 rules with 100% certainty.
+*   **🧠 Zero-Hallucination Determinism:** Uses `json-logic` for rule execution. Given the same input and date, the output is identical forever. No probabilistic AI "guesses" for compliance.
+*   **🛡️ Built-in Input Guard:** Every rule can have an optional **JSON Schema** to validate incoming transaction data *before* execution, ensuring data integrity.
+*   **🔍 Strict-Time Semantic Search:** Integrated with **Qdrant Vector DB**. Search rules conceptually (e.g., *"Show me import restrictions for microchips"*) while automatically filtering out any rule that wasn't legally active on the target date.
+
+---
 
 ## 🏗️ Architecture
 
-The system is divided into two massive wings:
+Tempus follows a **Clean Architecture** pattern, splitting concerns between two massive operational wings:
 
-* **The Deterministic Wing (PostgreSQL + FastAPI):**
-  Handles the exact mathematical evaluation of rules. A transaction hits the `/evaluate` endpoint, the engine travels in time to fetch the exact JSON-Logic active on that date, and returns a strict Pass/Fail with detailed error messages.
-* **The Semantic Wing (Qdrant Vector DB):**
-  A synchronized shadow of the rules engine. It stores vector embeddings of the rules, heavily indexed by `vigencia_inicio` and `vigencia_fin`, enabling AI to search and reason about the rules without hallucinating outdated policies.
+```mermaid
+graph TD
+    %% INGESTION
+    A[Rule Definitions / API] -->|LLM/Manual| C{Rule JSON + Metadata}
+    C -->|Patcher| D[Temporal Engine]
+    D -->|Atomic Update| E[(PostgreSQL Temporal)]
+    
+    %% VECTORIZATION
+    E -->|Background Sync| Q[(Qdrant Vector DB)]
+    
+    %% CONSUMPTION
+    E -->|Deterministic Rules| I[API REST: /evaluate]
+    E -->|Audit Trail| K[API REST: /history]
+    Q -->|Strict-Time Semantic Search| R[AI Agents / RAG]
+    
+    %% CLIENTS
+    I -->|Yes/No + Details| J[ERP / Banking / Aduanas]
+    R -->|Contextual Reasoning| S[AI Compliance Assistants]
+```
 
-## 🚀 Getting Started
+---
+
+## 🛠️ Tech Stack
+
+*   **Runtime:** Python 3.12+ with `uv` for lightning-fast dependency management.
+*   **Web Framework:** FastAPI (Asynchronous).
+*   **Primary DB:** PostgreSQL 16 (Temporal ranges & GiST indexes).
+*   **Vector DB:** Qdrant (Semantic indexing).
+*   **Rule Logic:** `json-logic-qubit`.
+*   **LLM Integration:** LiteLLM (Agnostic: OpenAI, Anthropic, DeepSeek).
+
+---
+
+## ⚡ Quick Start
 
 ### 1. Prerequisites
 * [Docker & Docker Compose](https://docs.docker.com/compose/)
-* Python 3.12+ (We recommend using `uv` for dependency management)
+* [uv](https://github.com/astral-sh/uv) (Recommended)
 
-### 2. Environment Setup
-Copy the example environment file and fill in your API keys (especially `LLM_API_KEY` for vectorization):
+### 2. Infrastructure Setup
 ```bash
-cp .env.example .env
-```
+# Clone and enter
+git clone https://github.com/JPatronC92/Lex-API-Mx.git && cd Lex-API-Mx
 
-### 3. Spin up the Infrastructure
-Start PostgreSQL (with `btree_gist` extension) and Qdrant:
-```bash
+# Start DB and Qdrant
 docker-compose up -d
-```
 
-### 4. Install Dependencies
-```bash
+# Install dependencies
 uv sync
-# Or using standard pip: pip install -r pyproject.toml
 ```
 
-### 5. Run Database Migrations
-Set up the tables and the temporal exclusion constraints:
+### 3. Initialize & Seed
 ```bash
-alembic upgrade head
+# Run migrations to setup temporal constraints
+uv run alembic upgrade head
+
+# Seed a sample Universal Rule (e.g., Aduana MEX Microchips)
+uv run python scripts/seed_universal_rules.py
 ```
 
-### 6. Seed Universal Rules & Start Server
-Inject the sample Universal Rule (e.g., Taiwan Microchip Customs Rule):
+### 4. Run the API
 ```bash
-python scripts/seed_universal_rules.py
+uv run uvicorn src.interfaces.api.main:app --reload
 ```
 
-Start the FastAPI server:
-```bash
-uvicorn src.interfaces.api.main:app --reload
-```
+---
 
-## 🔌 API Usage Example
+## 🔌 API Showcase: `/evaluate`
 
-**Endpoint:** `POST /api/v1/compliance/evaluate`
+Evaluate a transaction against the matrix of rules active at a specific point in time.
 
-**Payload:**
+**POST** `/api/v1/compliance/evaluate`
+
 ```json
 {
   "transaccion": {
     "codigo_hs": "8542.31",
     "origen": "TWN",
-    "destino": "MEX",
     "valor_usd": 50000,
     "tiene_certificado_nom": false
   },
@@ -86,22 +113,33 @@ uvicorn src.interfaces.api.main:app --reload
 }
 ```
 
-**Response:**
+**Response (BLOCKER):**
 ```json
 {
   "es_valido": false,
   "score_cumplimiento": 0.0,
   "errores": [
-    "El embarque de TWN requiere Certificado NOM-019 porque su valor ($ 50000) supera los $1000 USD."
+    "The shipment from TWN requires Certificate NOM-019 because its value ($50,000) exceeds $1,000 USD."
   ],
-  "warnings": [],
-  "reglas_ejecutadas": 1,
   "detalles_fallos": [
     {
       "clave": "ADUANA-MEX-8542-NOM",
       "severidad": "BLOCKER",
-      "mensaje": "El embarque de TWN requiere Certificado NOM-019 porque su valor ($ 50000) supera los $1000 USD."
+      "mensaje": "The shipment from TWN requires Certificate NOM-019..."
     }
   ]
 }
 ```
+
+---
+
+## 🗺️ Roadmap
+
+*   [ ] **Rust Core:** Rewrite the evaluation loop in Rust for sub-millisecond latency at scale.
+*   [ ] **Backoffice UI:** Visual timeline for rule management and approval workflows.
+*   [ ] **Multi-Tenancy:** Isolated rule-spaces for different organizational departments.
+
+---
+
+## 📄 License
+MIT License. Created by [JPatronC92](https://github.com/JPatronC92).
