@@ -1,7 +1,7 @@
 [project]
-name = "lex-mx-engine"
+name = "tempus-rule-engine"
 version = "0.1.0"
-description = "Add your description here"
+description = "Universal, Time-Travel Compliance Infrastructure"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

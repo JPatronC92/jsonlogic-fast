@@ -6,7 +6,7 @@ from jsonschema import validate, ValidationError
 from src.domain.schemas.compliance import ReglaEvaluable, ResultadoEvaluacion, DetalleFallo
 
 # A. Logging Estructurado
-logger = logging.getLogger("lex_mx.compliance_engine")
+logger = logging.getLogger("tempus.compliance_engine")
 
 class ComplianceEngine:
     """

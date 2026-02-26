@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Lex MX Engine"
+    PROJECT_NAME: str = "Tempus Rule Engine"
     API_V1_STR: str = "/api/v1"
 
     # Base de Datos (PostgreSQL)

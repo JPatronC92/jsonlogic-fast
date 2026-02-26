@@ -2,15 +2,15 @@ version: '3.8'
 services:
   db:
     image: postgres:16
-    container_name: pg-lex
+    container_name: tempus-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: lex_mx_db
+      POSTGRES_DB: tempus_db
     ports:
       - "5432:5432"
     volumes:
-      - lex_pgdata:/var/lib/postgresql/data
+      - tempus_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -19,13 +19,13 @@ services:
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant-lex
+    container_name: tempus-qdrant
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - qdrant_data:/qdrant/storage
+      - tempus_qdrant_data:/qdrant/storage
 
 volumes:
-  lex_pgdata:
-  qdrant_data:
+  tempus_pgdata:
+  tempus_qdrant_data:
