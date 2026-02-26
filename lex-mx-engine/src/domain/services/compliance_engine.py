@@ -2,6 +2,7 @@ import logging
 from string import Template
 from typing import Dict, Any, List
 from json_logic import jsonLogic
+from jsonschema import validate, ValidationError
 from src.domain.schemas.compliance import ReglaEvaluable, ResultadoEvaluacion, DetalleFallo
 
 # A. Logging Estructurado
@@ -26,14 +27,28 @@ class ComplianceEngine:
         
         for regla in reglas_ordenadas:
             try:
-                # C. Ejecución de json-logic segura
-                # TODO: Aquí iría la validación de schema JSON antes de ejecutar
+                # C. Validar Schema si existe antes de ejecutar lógica
+                if regla.schema_validacion:
+                    try:
+                        validate(instance=contexto, schema=regla.schema_validacion)
+                    except ValidationError as ve:
+                        mensaje_error = f"Error de esquema en {regla.clave_regla}: {ve.message}"
+                        logger.warning(mensaje_error)
+                        detalles_fallos.append(DetalleFallo(
+                            clave=regla.clave_regla,
+                            severidad="ERROR",
+                            mensaje=mensaje_error
+                        ))
+                        errores.append(mensaje_error)
+                        continue # No ejecutamos lógica si el esquema falla
+
+                # D. Ejecución de json-logic segura
                 cumple = jsonLogic(regla.logica, contexto)
                 
                 reglas_ejecutadas += 1
                 
                 if not cumple:
-                    # D. Interpolación Segura
+                    # E. Interpolación Segura
                     mensaje = self._formatear_mensaje(regla.template_error, contexto)
                     
                     detalle = DetalleFallo(
@@ -52,7 +67,7 @@ class ComplianceEngine:
                         warnings.append(mensaje)
                         
             except Exception as e:
-                # E. Manejo de Excepciones sin romper el flujo completo (o sí, según diseño)
+                # F. Manejo de Excepciones sin romper el flujo completo
                 logger.error(f"Error crítico ejecutando regla {regla.clave_regla}: {str(e)}", exc_info=True)
                 errores.append(f"Error de sistema en regla {regla.clave_regla}")
                 detalles_fallos.append(DetalleFallo(clave=regla.clave_regla, severidad="ERROR", mensaje="Error de sistema"))
@@ -61,7 +76,7 @@ class ComplianceEngine:
         
         return ResultadoEvaluacion(
             es_valido=es_valido,
-            score_cumplimiento=1.0 if es_valido else 0.0, # Simplificado
+            score_cumplimiento=1.0 if es_valido else 0.0,
             errores=errores,
             warnings=warnings,
             reglas_ejecutadas=reglas_ejecutadas,

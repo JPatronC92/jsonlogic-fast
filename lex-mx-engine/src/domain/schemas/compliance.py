@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 from datetime import date
 
 class ReglaEvaluable(BaseModel):
@@ -7,6 +7,7 @@ class ReglaEvaluable(BaseModel):
     id_version: str
     clave_regla: str
     logica: Dict[str, Any]
+    schema_validacion: Optional[Dict[str, Any]] = None # JSON Schema para validar contexto
     template_error: str
     prioridad: int
     severidad: Literal['INFO', 'WARNING', 'ERROR', 'BLOCKER']

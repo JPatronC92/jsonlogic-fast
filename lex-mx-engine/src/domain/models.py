@@ -112,6 +112,7 @@ class ReglaVersion(Base):
     
     # La Lógica Pura
     logica_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    contexto_schema: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True) # JSON Schema para validar input
     template_error: Mapped[str] = mapped_column(String, nullable=False) # Usaremos string.Template
     
     # Vigencia Temporal (Time Travel)

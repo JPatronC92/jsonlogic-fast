@@ -43,6 +43,7 @@ async def evaluate_universal(request: UniversalEvaluateRequest, session: Session
                 id_version=str(v.id),
                 clave_regla=v.regla.clave_interna,
                 logica=v.logica_json,
+                schema_validacion=v.contexto_schema,
                 template_error=v.template_error,
                 prioridad=v.prioridad,
                 severidad=v.severidad
@@ -85,6 +86,7 @@ async def check_compliance(request: ComplianceCheckRequest, session: SessionDep)
                 id_version=str(v.id),
                 clave_regla=v.regla.clave_interna,
                 logica=v.logica_json,
+                schema_validacion=v.contexto_schema,
                 template_error=v.template_error,
                 prioridad=v.prioridad,
                 severidad=v.severidad
