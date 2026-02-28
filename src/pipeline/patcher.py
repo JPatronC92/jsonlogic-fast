@@ -1,7 +1,6 @@
-from datetime import timedelta
 import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select
 from asyncpg import Range
 from src.domain.schemas.patch import PatchCandidate
 from src.domain.services.resolver import UnidadResolver

@@ -4,7 +4,6 @@ from datetime import date
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models
 import litellm
-from litellm import embedding
 
 from src.core.config import get_settings
 

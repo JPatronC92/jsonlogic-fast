@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import date
 from typing import Optional, Literal, Dict, Any
-from uuid import UUID
 
 class VigenciaPatch(BaseModel):
     inicio: date

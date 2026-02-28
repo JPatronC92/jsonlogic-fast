@@ -1,4 +1,4 @@
-from typing import Generator, Annotated
+from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.infrastructure.database import get_db
