@@ -1,0 +1,13 @@
+[package]
+name = "tempus_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "tempus_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+jsonlogic = "0.5.1"
+serde_json = "1.0"

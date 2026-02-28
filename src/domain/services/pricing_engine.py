@@ -7,6 +7,12 @@ from jsonschema import validate, ValidationError
 from src.domain.schemas.pricing import CalculateFeeResponse, FeeBreakdown, BatchSimulateResponse
 from src.domain.models import PricingRuleVersion
 
+try:
+    import tempus_core
+    RUST_CORE_AVAILABLE = True
+except ImportError:
+    RUST_CORE_AVAILABLE = False
+
 logger = logging.getLogger("tempus.pricing_engine")
 
 class PricingEngine:
@@ -75,9 +81,18 @@ class PricingEngine:
         # 3. Evaluación Matemática Determinista
         for regla_version in reglas_activas:
             try:
-                # jsonLogic evalúa el contexto y ahora retorna un NÚMERO (el monto a cobrar por esta regla)
-                # Ejemplo de json_logic: {"*": [{"var": "amount"}, 0.015]} para 1.5%
-                fee_amount = float(jsonLogic(regla_version.logica_json, contexto_tx))
+                if RUST_CORE_AVAILABLE:
+                    try:
+                        # 🦀 Vía Rápida (Rust Native)
+                        rule_str = json.dumps(regla_version.logica_json)
+                        ctx_str = json.dumps(contexto_tx)
+                        fee_amount = tempus_core.evaluate_fee(rule_str, ctx_str)
+                    except Exception as rust_err:
+                        logger.warning(f"Tempus Core (Rust) falló para regla {regla_version.rule.name}, fallback a Python: {rust_err}")
+                        fee_amount = float(jsonLogic(regla_version.logica_json, contexto_tx))
+                else:
+                    # 🐍 Vía Lenta (Python)
+                    fee_amount = float(jsonLogic(regla_version.logica_json, contexto_tx))
                 
                 if fee_amount > 0:
                     calculated_fees.append(FeeBreakdown(
