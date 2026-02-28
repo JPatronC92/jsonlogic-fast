@@ -1,40 +1,21 @@
 import pytest
-from src.domain.services.compliance_engine import ComplianceEngineUniversal
-
-# Mock classes to simulate the expected models
-class MockReglaIdentidad:
-    def __init__(self, urn_global="urn:test", criticidad="ERROR"):
-        self.urn_global = urn_global
-        self.criticidad = criticidad
-
-class MockReglaVersion:
-    def __init__(self, logica_json, template_error, urn_global="urn:test", criticidad="ERROR"):
-        self.logica_json = logica_json
-        self.template_error = template_error
-        self.regla = MockReglaIdentidad(urn_global, criticidad)
-
+from src.domain.services.compliance_engine import ComplianceEngine
+from src.domain.schemas.compliance import ReglaEvaluable
 
 # Fixtures (Datos de prueba)
 @pytest.fixture
 def engine():
-    return ComplianceEngineUniversal()
-
-@pytest.fixture
-def esquema_basico():
-    return {
-        "type": "object",
-        "properties": {
-            "tipo": {"type": "string"},
-            "monto": {"type": "number"},
-            "metodo_pago": {"type": "string"}
-        }
-    }
+    return ComplianceEngine()
 
 @pytest.fixture
 def regla_gasolina():
-    return MockReglaVersion(
+    return ReglaEvaluable(
+        id_version="v1",
+        clave_regla="ISR-GAS-001",
+        prioridad=100,
+        severidad="ERROR",
         template_error="Gasto de combustible por $monto requiere tarjeta, no $metodo_pago.",
-        logica_json={
+        logica={
             "if": [
                 {"and": [
                     {"==": [{"var": "tipo"}, "combustible"]},
@@ -43,39 +24,39 @@ def regla_gasolina():
                 {"in": [{"var": "metodo_pago"}, ["TARJETA", "TRANSFERENCIA"]]},
                 True # Pasa si no es combustible > 2000
             ]
-        },
-        urn_global="urn:lex:mx:fiscal:isr:deduccion_combustible"
+        }
     )
 
-def test_gasolina_pago_invalido(engine, regla_gasolina, esquema_basico):
+def test_gasolina_pago_invalido(engine, regla_gasolina):
     """Caso Negativo: Efectivo > 2000"""
     contexto = {"tipo": "combustible", "monto": 3000, "metodo_pago": "EFECTIVO"}
     
-    resultado = engine.evaluar(contexto, [regla_gasolina], esquema_basico)
+    resultado = engine.evaluar(contexto, [regla_gasolina])
     
     assert resultado.es_valido is False
-    assert len(resultado.detalles_fallos) == 1
+    assert len(resultado.errores) == 1
     # Validar interpolación segura
-    assert "requiere tarjeta, no EFECTIVO" in resultado.detalles_fallos[0].mensaje
+    assert "requiere tarjeta, no EFECTIVO" in resultado.errores[0]
 
-def test_gasolina_limite_exacto(engine, regla_gasolina, esquema_basico):
+def test_gasolina_limite_exacto(engine, regla_gasolina):
     """Caso Borde: Exactamente 2000 (Debe pasar en efectivo)"""
     contexto = {"tipo": "combustible", "monto": 2000, "metodo_pago": "EFECTIVO"}
     
-    resultado = engine.evaluar(contexto, [regla_gasolina], esquema_basico)
+    resultado = engine.evaluar(contexto, [regla_gasolina])
     
     assert resultado.es_valido is True
-    assert len(resultado.detalles_fallos) == 0
+    assert len(resultado.errores) == 0
 
-def test_interpolacion_segura_variables_faltantes(engine, esquema_basico):
+def test_interpolacion_segura_variables_faltantes(engine):
     """Si el contexto no tiene la variable del mensaje, no debe explotar"""
-    regla_rota = MockReglaVersion(
+    regla_rota = ReglaEvaluable(
+        id_version="v1", clave_regla="TEST", prioridad=10, severidad="ERROR",
         template_error="Error en campo $variable_inexistente",
-        logica_json={"==": [1, 2]} # Siempre falla
+        logica={"==": [1, 2]} # Siempre falla
     )
     
-    resultado = engine.evaluar({}, [regla_rota], esquema_basico)
+    resultado = engine.evaluar({}, [regla_rota])
     
     assert resultado.es_valido is False
     # El mensaje debe salir raw o con placeholder vacío, pero no Exception
-    assert "Error en campo $variable_inexistente" in resultado.detalles_fallos[0].mensaje
+    assert "Error en campo $variable_inexistente" in resultado.errores[0]

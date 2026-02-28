@@ -1,9 +1,9 @@
 import uuid as uuid_pkg
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy import (
-    String, ForeignKey,
-    Text, Integer, DateTime
+    Column, String, Date, ForeignKey,
+    Index, Text, Boolean, CheckConstraint, Integer, DateTime
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, DATERANGE, ENUM
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -18,11 +18,10 @@ class Base(DeclarativeBase):
 # Enums
 # We need to use create_type=False if we want to manage it purely via migrations,
 # or handle it carefully. For now, we define it as part of the models.
-# Changing to create_type=True so tests using Base.metadata.create_all() can automatically create the ENUMs
-EstadoNorma = ENUM('VIGENTE', 'ABROGADA', 'DEROGADA', name='estado_norma', create_type=True)
-TipoUnidad = ENUM('TITULO', 'CAPITULO', 'ARTICULO', 'FRACCION', 'PARRAFO', name='tipo_unidad', create_type=True)
-SeveridadRegla = ENUM('INFO', 'WARNING', 'ERROR', 'BLOCKER', name='severidad_regla', create_type=True)
-TipoRegla = ENUM('OBLIGATORIA', 'SUGERENCIA', 'CALCULO', name='tipo_regla', create_type=True)
+EstadoNorma = ENUM('VIGENTE', 'ABROGADA', 'DEROGADA', name='estado_norma', create_type=False)
+TipoUnidad = ENUM('TITULO', 'CAPITULO', 'ARTICULO', 'FRACCION', 'PARRAFO', name='tipo_unidad', create_type=False)
+SeveridadRegla = ENUM('INFO', 'WARNING', 'ERROR', 'BLOCKER', name='severidad_regla', create_type=False)
+TipoRegla = ENUM('OBLIGATORIA', 'SUGERENCIA', 'CALCULO', name='tipo_regla', create_type=False)
 
 class Norma(Base):
     __tablename__ = "normas"
@@ -89,89 +88,43 @@ class VersionContenido(Base):
         ),
     )
 
-# --- CAPA 1: Clasificación Geopolítica ---
-
-class Jurisdiccion(Base):
-    __tablename__ = "jurisdicciones"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True) # Ej: "iso:mx"
-    nombre: Mapped[str] = mapped_column(String, nullable=False)
-    tipo: Mapped[str] = mapped_column(String) # FEDERAL, ESTATAL, SUPRANACIONAL
-    parent_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("jurisdicciones.id"), nullable=True)
-
-class Autoridad(Base):
-    __tablename__ = "autoridades"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True) # Ej: "SAT"
-    nombre: Mapped[str] = mapped_column(String, nullable=False)
-    jurisdiccion_id: Mapped[str] = mapped_column(String, ForeignKey("jurisdicciones.id"))
-    sector: Mapped[str] = mapped_column(String) # SALUD, FINANZAS, LOGISTICA
-
-# --- CAPA 2: Dominio Abstracto ---
-
-class Dominio(Base):
-    __tablename__ = "dominios"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True) # Ej: "FISCAL_RENTA"
-    descripcion: Mapped[str] = mapped_column(String)
-
-# --- CAPA 4: Ámbito de Aplicación ---
-
-class AmbitoAplicacion(Base):
-    __tablename__ = "ambitos_aplicacion"
-
-    id: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
-    jurisdiccion_id: Mapped[str] = mapped_column(String, ForeignKey("jurisdicciones.id"))
-    autoridad_id: Mapped[str] = mapped_column(String, ForeignKey("autoridades.id"))
-    industria: Mapped[str] = mapped_column(String)
-
-# --- CAPA 6: Versionado de Esquema (Contexto) ---
-
-class EsquemaContexto(Base):
-    __tablename__ = "esquemas_contexto"
-
-    id: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
-    dominio_id: Mapped[str] = mapped_column(String, ForeignKey("dominios.id"))
-    version: Mapped[int] = mapped_column(Integer, nullable=False)
-    schema_json: Mapped[dict] = mapped_column(JSONB, nullable=False) # JSON Schema formal
-
-# --- CAPA 3: Identidad Universal ---
-
 class ReglaIdentidad(Base):
+    """La identidad perpetua de una regla (ej: 'Tope Deducción Gasolina')."""
     __tablename__ = "reglas_identidad"
     
     uuid: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
-    urn_global: Mapped[Optional[str]] = mapped_column(String, unique=True, index=True, nullable=True) # Nuevo estándar
-    clave_interna: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Retrocompatibilidad
-
-    dominio_id: Mapped[str] = mapped_column(String, ForeignKey("dominios.id"))
-    tipo_obligacion: Mapped[str] = mapped_column(String) # LIMITE, PROHIBICION, REQUISITO
-    criticidad: Mapped[str] = mapped_column(String) # INFO, WARNING, BLOCKER
+    clave_interna: Mapped[str] = mapped_column(String, unique=True, index=True) # Ej: "ISR-DED-GAS-001"
+    nombre_humano: Mapped[str] = mapped_column(String)
     
     versiones = relationship("ReglaVersion", back_populates="regla", cascade="all, delete-orphan")
 
-# --- CAPA 5: Implementación Temporal (El Núcleo) ---
-
 class ReglaVersion(Base):
+    """La lógica vigente en un periodo de tiempo específico."""
     __tablename__ = "reglas_versiones"
 
     id: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
     regla_uuid: Mapped[uuid_pkg.UUID] = mapped_column(ForeignKey("reglas_identidad.uuid"), nullable=False)
-    ambito_id: Mapped[uuid_pkg.UUID] = mapped_column(ForeignKey("ambitos_aplicacion.id"), nullable=False)
-    esquema_contexto_id: Mapped[uuid_pkg.UUID] = mapped_column(ForeignKey("esquemas_contexto.id"), nullable=False)
     
+    # Metadatos de Ejecución
+    prioridad: Mapped[int] = mapped_column(Integer, default=50) # 100 = Alta, 0 = Baja
+    severidad = mapped_column(SeveridadRegla, nullable=False, default='ERROR')
+    tipo = mapped_column(TipoRegla, nullable=False, default='OBLIGATORIA')
+    
+    # La Lógica Pura
     logica_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    template_error: Mapped[str] = mapped_column(String, nullable=False)
+    contexto_schema: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True) # JSON Schema para validar input
+    template_error: Mapped[str] = mapped_column(String, nullable=False) # Usaremos string.Template
+    
+    # Vigencia Temporal (Time Travel)
     vigencia: Mapped[object] = mapped_column(DATERANGE, nullable=False)
-    hash_firma: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Event sourcing proof
     
     regla = relationship("ReglaIdentidad", back_populates="versiones")
 
+    # CONSTRAINT DE EXCLUSIÓN: Una regla no puede tener dos versiones activas al mismo tiempo
     __table_args__ = (
         ExcludeConstraint(
-            ('regla_uuid', '='),
-            ('ambito_id', '='),
-            ('vigencia', '&&'),
-            name='no_solapamiento_por_ambito_vigencia'
+            (regla_uuid, '='),
+            (vigencia, '&&'),
+            name='evitar_solapamiento_reglas'
         ),
     )

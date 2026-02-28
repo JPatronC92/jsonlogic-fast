@@ -868,6 +868,61 @@ wheels = [
 ]
 
 [[package]]
+name = "lex-mx-engine"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "greenlet" },
+    { name = "json-logic-qubit" },
+    { name = "jsonschema" },
+    { name = "litellm" },
+    { name = "playwright" },
+    { name = "pydantic-settings" },
+    { name = "python-multipart" },
+    { name = "qdrant-client" },
+    { name = "sqlalchemy" },
+    { name = "uvicorn" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "isort" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.18.4" },
+    { name = "asyncpg", specifier = ">=0.31.0" },
+    { name = "fastapi", specifier = ">=0.133.0" },
+    { name = "greenlet", specifier = ">=3.3.2" },
+    { name = "json-logic-qubit", specifier = ">=0.9.1" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "litellm", specifier = ">=1.81.15" },
+    { name = "playwright", specifier = ">=1.58.0" },
+    { name = "pydantic-settings", specifier = ">=2.13.1" },
+    { name = "python-multipart", specifier = ">=0.0.22" },
+    { name = "qdrant-client", specifier = ">=1.17.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.47" },
+    { name = "uvicorn", specifier = ">=0.41.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=26.1.0" },
+    { name = "isort", specifier = ">=8.0.0" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
+    { name = "ruff", specifier = ">=0.15.2" },
+]
+
+[[package]]
 name = "litellm"
 version = "1.81.15"
 source = { registry = "https://pypi.org/simple" }
@@ -1937,61 +1992,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c4/68/79977123bb7be889ad680d79a40f339082c1978b5cfcf62c2d8d196873ac/starlette-0.52.1.tar.gz", hash = "sha256:834edd1b0a23167694292e94f597773bc3f89f362be6effee198165a35d62933", size = 2653702, upload-time = "2026-01-18T13:34:11.062Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/0d/13d1d239a25cbfb19e740db83143e95c772a1fe10202dda4b76792b114dd/starlette-0.52.1-py3-none-any.whl", hash = "sha256:0029d43eb3d273bc4f83a08720b4912ea4b071087a3b48db01b7c839f7954d74", size = 74272, upload-time = "2026-01-18T13:34:09.188Z" },
-]
-
-[[package]]
-name = "tempus-rule-engine"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "alembic" },
-    { name = "asyncpg" },
-    { name = "fastapi" },
-    { name = "greenlet" },
-    { name = "json-logic-qubit" },
-    { name = "jsonschema" },
-    { name = "litellm" },
-    { name = "playwright" },
-    { name = "pydantic-settings" },
-    { name = "python-multipart" },
-    { name = "qdrant-client" },
-    { name = "sqlalchemy" },
-    { name = "uvicorn" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "black" },
-    { name = "isort" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic", specifier = ">=1.18.4" },
-    { name = "asyncpg", specifier = ">=0.31.0" },
-    { name = "fastapi", specifier = ">=0.133.0" },
-    { name = "greenlet", specifier = ">=3.3.2" },
-    { name = "json-logic-qubit", specifier = ">=0.9.1" },
-    { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "litellm", specifier = ">=1.81.15" },
-    { name = "playwright", specifier = ">=1.58.0" },
-    { name = "pydantic-settings", specifier = ">=2.13.1" },
-    { name = "python-multipart", specifier = ">=0.0.22" },
-    { name = "qdrant-client", specifier = ">=1.17.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.47" },
-    { name = "uvicorn", specifier = ">=0.41.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "black", specifier = ">=26.1.0" },
-    { name = "isort", specifier = ">=8.0.0" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "pytest-asyncio", specifier = ">=1.3.0" },
-    { name = "ruff", specifier = ">=0.15.2" },
 ]
 
 [[package]]

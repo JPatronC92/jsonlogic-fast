@@ -5,12 +5,13 @@ from datetime import date
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.infrastructure.database import AsyncSessionLocal
-from src.domain.models import VersionContenido
+from src.domain.models import UnidadEstructural, VersionContenido, Norma
 from src.core.config import get_settings
 from src.domain.schemas.patch import PatchCandidate, VigenciaPatch
 from src.pipeline.patcher import Patcher

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import Optional
 from datetime import date
 from uuid import UUID
 from src.interfaces.api.dependencies import SessionDep

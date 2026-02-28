@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 from uuid import UUID
 from datetime import date
 from sqlalchemy import select

@@ -1,6 +1,7 @@
 import json
 import re
 from litellm import completion
+from typing import Optional, Dict, Any
 from src.core.config import get_settings
 from src.domain.schemas.patch import PatchCandidate
 from src.domain.exceptions import LexEngineError
@@ -55,7 +56,7 @@ class LLMClient:
             )
 
             raw_content = response.choices[0].message.content
-            print("📄 Respuesta LLM recibida.")
+            print(f"📄 Respuesta LLM recibida.")
             
             # Limpiar posible formato Markdown
             cleaned_content = raw_content.strip()
@@ -88,6 +89,7 @@ class LLMClient:
 
 if __name__ == "__main__":
     # Test (mockeado)
+    import asyncio
     async def test():
         client = LLMClient()
         # Mock de texto de decreto
