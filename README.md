@@ -19,7 +19,10 @@ In complex industries (Fintech, Global Trade, Health), rules change constantly. 
 
 *   **🕰️ Absolute Time-Travel:** Leveraging PostgreSQL's `DATERANGE` and `ExcludeConstraint` (GiST), Tempus mathematically guarantees that rule versions never overlap. You can audit a 2022 transaction against 2022 rules with 100% certainty.
 *   **🧠 Zero-Hallucination Determinism:** Uses `json-logic` for rule execution. Given the same input and date, the output is identical forever. No probabilistic AI "guesses" for compliance.
-*   **🛡️ Built-in Input Guard:** Every rule can have an optional **JSON Schema** to validate incoming transaction data *before* execution, ensuring data integrity.
+*   **🛡️ Built-in Input Guard:** Every domain uses dynamic **JSON Schema Contexts** (`EsquemaContexto`) to validate incoming transaction payloads *before* they touch the rule logic, guaranteeing strict structural integrity across any industry.
+*   **🌎 Universal Planetary Architecture:** Rules are identified by strict standard **URNs** (`urn:lex:iso:mx:...`) and filtered contextually by *Jurisdictions* and *Authorities* (`AmbitoAplicacion`).
+*   **🔒 Cryptographic Event Sourcing:** Every rule version published is hashed with SHA-256 (`hash_firma`). You can irrefutably demonstrate via the `/verify-rule` API that a decision was made using a mathematically unaltered rule.
+*   **⚡ Sub-millisecond Memory Cache:** An asynchronous TTL-based memory cache mitigates database round-trips for repetitive context scoping during high-throughput ERP rule evaluations.
 *   **🔍 Strict-Time Semantic Search:** Integrated with **Qdrant Vector DB**. Search rules conceptually (e.g., *"Show me import restrictions for microchips"*) while automatically filtering out any rule that wasn't legally active on the target date.
 
 ---
@@ -95,21 +98,27 @@ uv run uvicorn src.interfaces.api.main:app --reload
 
 ---
 
-## 🔌 API Showcase: `/evaluate`
+## 🔌 API Showcase
 
-Evaluate a transaction against the matrix of rules active at a specific point in time.
+### `/evaluate` (Universal Engine)
+Evaluate a transaction against the matrix of rules active at a specific point in time, targeting a specific geopolitical and industrial context.
 
 **POST** `/api/v1/compliance/evaluate`
 
 ```json
 {
-  "transaccion": {
-    "codigo_hs": "8542.31",
-    "origen": "TWN",
-    "valor_usd": 50000,
-    "tiene_certificado_nom": false
+  "selector": {
+    "jurisdiccion": "iso:mx",
+    "autoridad": "SAT",
+    "industria": "FINANZAS",
+    "dominio": "FISCAL_RENTA"
   },
-  "fecha_operacion": "2026-03-15"
+  "fecha_operacion": "2026-03-15",
+  "contexto": {
+    "tipo": "combustible",
+    "monto": 3000,
+    "metodo_pago": "EFECTIVO"
+  }
 }
 ```
 
@@ -117,17 +126,29 @@ Evaluate a transaction against the matrix of rules active at a specific point in
 ```json
 {
   "es_valido": false,
-  "score_cumplimiento": 0.0,
-  "errores": [
-    "The shipment from TWN requires Certificate NOM-019 because its value ($50,000) exceeds $1,000 USD."
-  ],
+  "reglas_ejecutadas": 1,
   "detalles_fallos": [
     {
-      "clave": "ADUANA-MEX-8542-NOM",
-      "severidad": "BLOCKER",
-      "mensaje": "The shipment from TWN requires Certificate NOM-019..."
+      "urn_global": "urn:lex:mx:fiscal:isr:deduccion_combustible",
+      "mensaje": "Gasto de combustible por 3000 requiere tarjeta, no EFECTIVO.",
+      "criticidad": "BLOCKER"
     }
   ]
+}
+```
+
+### `/verify-rule/{id}` (Cryptographic Audit)
+Verify that a rule's logic hasn't been tampered with since its publication.
+
+**POST** `/api/v1/management/verify-rule/123e4567-e89b-12d3-a456-426614174000`
+
+```json
+{
+  "valid": true,
+  "hash_match": true,
+  "stored_hash": "sha256:abcd1234...",
+  "recalculated_hash": "sha256:abcd1234...",
+  "hash_algoritmo": "SHA-256"
 }
 ```
 
