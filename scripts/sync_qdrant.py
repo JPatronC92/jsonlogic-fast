@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.infrastructure.database import AsyncSessionLocal
-from src.domain.models import VersionContenido, UnidadEstructural, Norma
+from src.domain.models import VersionContenido, UnidadEstructural
 from src.infrastructure.vector_store import VectorStore
 
 async def sync_database_to_qdrant():
@@ -44,10 +44,8 @@ async def sync_database_to_qdrant():
             norma = unidad.norma
             
             # Crear un texto enriquecido para mejorar el contexto del LLM
-            texto_enriquecido = f"Ley: {norma.nombre_corto or norma.nombre_oficial}
-"
-            texto_enriquecido += f"Sección: {version.nomenclatura_visible}
-"
+            texto_enriquecido = f"Ley: {norma.nombre_corto or norma.nombre_oficial}\n"
+            texto_enriquecido += f"Sección: {version.nomenclatura_visible}\n"
             texto_enriquecido += f"Contenido: {version.texto_contenido}"
             
             inicio = version.vigencia.lower
@@ -74,8 +72,8 @@ async def sync_database_to_qdrant():
         print("✨ Sincronización completada exitosamente.")
         
         # 4. Prueba rápida de búsqueda semántica con viaje en el tiempo
-        print("
-🔍 Probando el RAG Legal Definitivo...")
+        print("""
+🔍 Probando el RAG Legal Definitivo...""")
         query = "¿Qué impuestos aplican a la importación o cuáles son los requisitos aduanales?"
         fecha_prueba = date(2026, 3, 15)
         

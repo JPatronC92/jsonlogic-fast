@@ -1,5 +1,4 @@
 import requests
-import json
 from sys import argv
 from datetime import date
 
@@ -14,9 +13,9 @@ def print_tree(nodes, level=0):
             print_tree(node['hijos'], level + 1)
 
 def main():
-    print("
+    print("""
 🏛️  LEX API - Cliente de Consola 🏛️
-")
+""")
     
     # 1. Obtener normas
     print("1. Consultando Leyes disponibles...")
@@ -42,15 +41,15 @@ def main():
     if len(argv) > 1:
         target_date = argv[1] # Permitir pasar fecha por CLI
         
-    print(f"
-2. Descargando estructura para la fecha: {target_date}...")
+    print(f"""
+2. Descargando estructura para la fecha: {target_date}...""")
     
     res = requests.get(f"{API_URL}/normas/{norma_id}/estructura", params={"fecha": target_date})
     if res.status_code == 200:
         arbol = res.json()
-        print(f"
+        print(f"""
 📚 Árbol de la Ley ({len(arbol)} nodos principales):
-")
+""")
         print_tree(arbol)
     else:
         print(f"❌ Error obteniendo estructura: {res.text}")

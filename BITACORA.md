@@ -1,72 +1,70 @@
-# 📂 Project Bitacora: Tempus Rule Engine
+# 📂 Project Bitacora: Tempus Billing & Commission Engine
 
 **Cut-off Date:** Feb 26, 2026
-**Status:** Successfully pivoted to a Domain-Agnostic, Universal Temporal Rule Engine.
+**Status:** 🦄 Unicorn Pivot Executed. Transitioned from Legal Compliance to API-First Financial Billing Infrastructure.
 **Repository:** `JPatronC92/Lex-API-Mx`
 
 ---
 
-## 1️⃣ What is Tempus?
+## 1️⃣ The "Unicorn Pivot"
 
-Tempus is **Universal Compliance Infrastructure**. It treats rules (legal, financial, logistic, medical) as versioned source code. 
+We realized that the architectural core built for "Time-Travel Legal Compliance" solves an even more painful, lucrative, and critical problem in the Fintech/SaaS industry: **Billing, Commission Splits, and Pricing Rules.**
 
-By leveraging PostgreSQL's advanced temporal ranges and Qdrant's vector capabilities, Tempus allows for deterministic "Time Travel" evaluation. This means you can ask the engine: *"Was this transaction valid according to the rules active on June 15th, 2024?"* and get a mathematically certain answer, free from AI hallucinations.
+Instead of dealing with unstructured government texts and AI scrapers, we shifted the domain to pure, determinist mathematical operations. 
+
+Tempus is now the **Deterministic & Time-Travel Pricing Infrastructure**.
 
 ---
 
 ## 2️⃣ Technical Inventory (Work Done in this Session) 🛠️
 
-During this session, we transformed the project's identity and capabilities to reach "Enterprise-Grade" level.
+### A. Core Entities Refactor (Domain Driven Pivot) 🧬
+We wiped the legacy Legal/Norma models and introduced the Financial Domain in `src/domain/models.py`:
+*   `PricingScheme`: Groups multiple rules (e.g., "Marketplace Tier 1").
+*   `PricingRuleIdentity`: The immutable ID of a fee.
+*   `PricingRuleVersion`: The time-travel mathematical logic (`json-logic`).
+*   `PricingContextSchema`: JSON schema validation for payloads to prevent billing errors.
 
-### A. The Pivot (Lex-MX -> Tempus) 🚀
-*   **Agnostic Architecture:** Removed all hardcoded legal dependencies to create a universal rule engine for any sector (Aduanas, Fintech, Healthcare).
-*   **Repo Consolidation:** Refactored the entire repository structure, moving from a nested `lex-mx-engine/` folder to a clean, flat root structure.
-*   **Global Rebranding:** Updated `pyproject.toml`, `config.py`, and `docker-compose.yml` to reflect the **Tempus Rule Engine** identity.
+### B. The Financial Evaluator (Pricing Engine) 🧮
+*   Removed `compliance_engine.py` (boolean validations).
+*   Created `pricing_engine.py`. The new engine executes `json-logic` to return exact **float amounts** (fees), aggregates them, and calculates the `net_settlement`.
+*   Added cryptographic hashing of the execution state to provide irrefutable audit trails.
+*   **Security Fix:** Implemented defensive JSON Schema validation *before* payload parsing to prevent malicious inputs from breaking the math engine.
 
-### B. Compliance Guard (Input Validation) 🛡️
-*   **JSON Schema Integration:** Added pre-execution validation. Now, rules can define an optional JSON Schema to verify the ERP/Bank transaction context *before* evaluating logic, preventing data errors.
-
-### C. The Semantic Wing (RAG Infrastructure) 🧠
-*   **Qdrant Vector DB:** Implemented the infrastructure to vectorize rules with strict temporal metadata.
-*   **Universal Evaluator:** Created the `POST /api/v1/compliance/evaluate` endpoint, capable of "Time-Travel" for any rule set.
-
-### D. Engineering Standards ⚙️
-*   **CI/CD Pipeline:** Implemented GitHub Actions (`.github/workflows/main.yml`) that spins up ephemeral Postgres and Qdrant services to validate tests on every push.
-*   **Professional Docs:** Created a high-quality `README.md` with architectural diagrams and a comprehensive guide.
-*   **Security & GitFlow:** Managed Git branches, commits, and remote synchronization via secure PATs.
-
----
-
-## 3️⃣ System Architecture (Phase 2)
-
-```mermaid
-graph TD
-    %% INGESTION
-    A[Data Sources / Rules] -->|LLM Parser| C{Rule Definition JSON}
-    C -->|Temporal Patcher| D[Patcher Engine]
-    D -->|Atomic Transaction| E[(PostgreSQL Temporal)]
-    
-    %% VECTORIZATION
-    E -->|Enriched Context Sync| Q[(Qdrant Vector DB)]
-    
-    %% CONSUMPTION
-    E -->|Universal Rules| I[API REST: /evaluate]
-    E -->|Audit Trail| K[API REST: /historial]
-    Q -->|Strict-Time Semantic Search| R[Semantic API / RAG]
-    
-    %% FINAL CLIENTS
-    I -->|Deterministic Result| J[ERP / Banking / Global Trade]
-    K -->|Historical Audit| L[Auditors / Legal Teams]
-    R -->|Contextual AI| S[AI Agents / Co-pilots]
-```
+### C. Clean Slate & Seeding 🧹🌱
+*   Deleted old schemas, endpoints, and Alembic migrations.
+*   Built a streamlined API: `POST /api/v1/billing/calculate`.
+*   Created `seed_pricing.py` to inject a real-world, Stripe-like fee structure (3.6% + $3.00 MXN) directly into the Time-Travel database.
 
 ---
 
-## 4️⃣ Roadmap (What's Next?) 🛤️
+## 3️⃣ The Launch Plan (Path to Product-Market Fit) 🚀
 
-The next phase aims for performance and enterprise scaling:
+This is our roadmap to take Tempus from a powerful backend to a globally recognized piece of financial infrastructure. We will build this as a **Developer-First Open Core** product.
 
-1.  **🦀 Rust Core Migration:** Rewriting the core logic in Rust to achieve <1ms latency and handle 100k+ TPS, making it suitable for high-frequency trading or massive global trade hubs.
-2.  **🖥️ Backoffice UI:** Developing a React/Streamlit dashboard to visualize temporal ranges, manage rules, and provide a "Human-in-the-Loop" approval system for AI-proposed rules.
-3.  **🏢 Multi-Tenant Support:** Architecture to isolate rule sets and data for different corporate clients or industries within the same infrastructure.
-4.  **🔗 ERP Adapters:** Building pre-set adapters/schemas for SAP, NetSuite, and major banking APIs.
+### Phase 1: The Batch Simulator (The "CFO Hook") - ✅ COMPLETED
+Engineers love the API, but CFOs write the checks. We need a killer feature that they can't live without.
+*   **Action:** Built `POST /api/v1/billing/simulate-batch` and integrated it into the core engine with robust error handling for malformed payloads.
+*   **Value:** Allows a user to throw 10,000 historical transactions at a *Draft* `PricingScheme` to instantly see the revenue impact (P&L Aggregation) and test structural changes before they hit production.
+
+### Phase 2: Performance & The Rust Core (The "Engineering Hook") - *Next Immediate Step*
+Fintechs care about latency and scale. Python is great for iteration, but Rust wins the benchmarks.
+*   **Action:** Extract the `json-logic` evaluation loop into a high-performance Rust service using `PyO3` or as an isolated gRPC/REST microservice.
+*   **Goal:** Achieve <1ms latency and handle 10k+ TPS on standard hardware. We want to publish a blog post titled *"How we process 10,000 Stripe transactions per second deterministically."*
+
+### Phase 3: Developer Experience (DX) & SDKs
+If it takes more than 10 minutes to integrate, we lose.
+*   **Action:** Release `tempus-python` and `tempus-node` SDKs. 
+*   **Action:** Create an interactive local sandbox (Dockerized) so devs can write `json-logic` rules and see the output in real-time.
+
+### Phase 4: The Financial UI (The Enterprise Upsell)
+*   **Action:** Build a sleek, Next.js/React dashboard.
+*   **Features:** A visual timeline for the Time-Travel Engine (see when a rule starts and ends), a visual builder for pricing rules (no-code json-logic), and the Batch Simulation reports.
+*   **Model:** The UI and multi-tenancy are the paid "Enterprise" features, while the core engine remains Open-Core.
+
+### Phase 5: Launch Day (Product Hunt & Hacker News)
+*   **Positioning:** *"Stop writing if/else for your pricing. Tempus is the open-source, time-travel billing engine."*
+*   **Assets:** A beautiful landing page, the open-source repo with the Rust benchmarks, and a sandbox where users can break the API.
+
+---
+*Signed: JPatronC92 & Tempus Co-Pilot.*

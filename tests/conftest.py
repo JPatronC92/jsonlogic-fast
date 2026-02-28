@@ -11,7 +11,7 @@ async def engine():
     engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, future=True)
     try:
         # Check connection
-        async with engine.connect() as conn:
+        async with engine.connect():
             pass
         yield engine
     except Exception as e:

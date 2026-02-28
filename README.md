@@ -1,164 +1,97 @@
-# Tempus Rule Engine ⏳⚛️
+# Tempus Billing & Commission Engine ⏳💰
 
-**The Universal, Deterministic & Time-Travel Compliance Infrastructure.**
+**The Deterministic & Time-Travel Pricing Infrastructure for Fintechs and Marketplaces.**
 
 [![CI](https://github.com/JPatronC92/Lex-API-Mx/actions/workflows/main.yml/badge.svg)](https://github.com/JPatronC92/Lex-API-Mx/actions/workflows/main.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Tempus is a high-performance, domain-agnostic rule engine designed for mission-critical compliance. It treats business logic, legal requirements, and technical constraints as **versioned source code**, allowing you to evaluate transactions against the exact rules that were active at any specific point in history—or even future rules already approved.
+Tempus is a high-performance, domain-agnostic pricing engine designed for mission-critical financial systems. It treats fees, commission splits, and pricing tiers as **versioned mathematical rules**, allowing you to calculate or audit a transaction against the exact pricing scheme that was active at any specific point in history.
+
+Stop burying your pricing logic in spaghetti `if/else` backend code. 
 
 ---
 
 ## 🚀 Why Tempus?
 
-In complex industries (Fintech, Global Trade, Health), rules change constantly. Most systems only know the "current" state of a rule. **Tempus knows the entire timeline.**
+In Fintech, SaaS, and Marketplaces, pricing rules change constantly. You have multiple tiers, volume-based fees, contractual overrides, and temporary promotions. Most billing systems fail when asked: *"How was this commission calculated 2 years ago?"* 
+
+**Tempus guarantees deterministic, auditable, and time-travel-ready financial operations.**
 
 ### 🌟 Core Superpowers
 
-*   **🕰️ Absolute Time-Travel:** Leveraging PostgreSQL's `DATERANGE` and `ExcludeConstraint` (GiST), Tempus mathematically guarantees that rule versions never overlap. You can audit a 2022 transaction against 2022 rules with 100% certainty.
-*   **🧠 Zero-Hallucination Determinism:** Uses `json-logic` for rule execution. Given the same input and date, the output is identical forever. No probabilistic AI "guesses" for compliance.
-*   **🛡️ Built-in Input Guard:** Every domain uses dynamic **JSON Schema Contexts** (`EsquemaContexto`) to validate incoming transaction payloads *before* they touch the rule logic, guaranteeing strict structural integrity across any industry.
-*   **🌎 Universal Planetary Architecture:** Rules are identified by strict standard **URNs** (`urn:lex:iso:mx:...`) and filtered contextually by *Jurisdictions* and *Authorities* (`AmbitoAplicacion`).
-*   **🔒 Cryptographic Event Sourcing:** Every rule version published is hashed with SHA-256 (`hash_firma`). You can irrefutably demonstrate via the `/verify-rule` API that a decision was made using a mathematically unaltered rule.
-*   **⚡ Sub-millisecond Memory Cache:** An asynchronous TTL-based memory cache mitigates database round-trips for repetitive context scoping during high-throughput ERP rule evaluations.
-*   **🔍 Strict-Time Semantic Search:** Integrated with **Qdrant Vector DB**. Search rules conceptually (e.g., *"Show me import restrictions for microchips"*) while automatically filtering out any rule that wasn't legally active on the target date.
+*   **🕰️ Absolute Time-Travel Audit:** Leveraging PostgreSQL's `DATERANGE` and `ExcludeConstraint` (GiST), Tempus mathematically guarantees that pricing rule versions never overlap. 
+*   **🧠 Zero-Float Determinism:** Uses `json-logic` for rule execution. Given the same input payload and historical date, the fee output is identical forever.
+*   **🛡️ Built-in Payload Guard:** Every pricing scheme uses dynamic **JSON Schema Contexts** to validate incoming transaction payloads *before* they touch the math logic, preventing costly data errors.
+*   **🔒 Cryptographic Receipt:** Every calculation returns a SHA-256 hash of the specific rule versions used. You can irrefutably demonstrate to auditors or merchants exactly how a fee was generated.
+*   **📊 Mass Simulation (Batch-Audit):** Test new pricing tiers against millions of historical transactions *before* deploying them to production to forecast revenue impact.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ The Pricing Model
 
-Tempus follows a **Clean Architecture** pattern, splitting concerns between two massive operational wings:
+Tempus abstract billing into 4 core concepts:
 
-```mermaid
-graph TD
-    %% INGESTION
-    A[Rule Definitions / API] -->|LLM/Manual| C{Rule JSON + Metadata}
-    C -->|Patcher| D[Temporal Engine]
-    D -->|Atomic Update| E[(PostgreSQL Temporal)]
-    
-    %% VECTORIZATION
-    E -->|Background Sync| Q[(Qdrant Vector DB)]
-    
-    %% CONSUMPTION
-    E -->|Deterministic Rules| I[API REST: /evaluate]
-    E -->|Audit Trail| K[API REST: /history]
-    Q -->|Strict-Time Semantic Search| R[AI Agents / RAG]
-    
-    %% CLIENTS
-    I -->|Yes/No + Details| J[ERP / Banking / Aduanas]
-    R -->|Contextual Reasoning| S[AI Compliance Assistants]
-```
-
----
-
-## 🛠️ Tech Stack
-
-*   **Runtime:** Python 3.12+ with `uv` for lightning-fast dependency management.
-*   **Web Framework:** FastAPI (Asynchronous).
-*   **Primary DB:** PostgreSQL 16 (Temporal ranges & GiST indexes).
-*   **Vector DB:** Qdrant (Semantic indexing).
-*   **Rule Logic:** `json-logic-qubit`.
-*   **LLM Integration:** LiteLLM (Agnostic: OpenAI, Anthropic, DeepSeek).
+1. **`PricingScheme`**: A collection of rules (e.g., "Marketplace Standard MX").
+2. **`PricingRuleIdentity`**: The logical concept of a fee (e.g., "Credit Card Processing Fee").
+3. **`PricingRuleVersion`**: The actual mathematical formula (json-logic) and the exact `DATERANGE` it is legally active.
+4. **`PricingContextSchema`**: The JSON Schema defining the required payload (amount, currency, tier, country).
 
 ---
 
 ## ⚡ Quick Start
 
-### 1. Prerequisites
-* [Docker & Docker Compose](https://docs.docker.com/compose/)
-* [uv](https://github.com/astral-sh/uv) (Recommended)
+### 1. Evaluate a Transaction (`/calculate-fee`)
 
-### 2. Infrastructure Setup
-```bash
-# Clone and enter
-git clone https://github.com/JPatronC92/Lex-API-Mx.git && cd Lex-API-Mx
+Send a transaction payload and an execution date. The engine will automatically find the correct mathematical rules active on that date and execute them.
 
-# Start DB and Qdrant
-docker-compose up -d
-
-# Install dependencies
-uv sync
-```
-
-### 3. Initialize & Seed
-```bash
-# Run migrations to setup temporal constraints
-uv run alembic upgrade head
-
-# Seed a sample Universal Rule (e.g., Aduana MEX Microchips)
-uv run python scripts/seed_universal_rules.py
-```
-
-### 4. Run the API
-```bash
-uv run uvicorn src.interfaces.api.main:app --reload
-```
-
----
-
-## 🔌 API Showcase
-
-### `/evaluate` (Universal Engine)
-Evaluate a transaction against the matrix of rules active at a specific point in time, targeting a specific geopolitical and industrial context.
-
-**POST** `/api/v1/compliance/evaluate`
+**POST** `/api/v1/billing/calculate`
 
 ```json
 {
-  "selector": {
-    "jurisdiccion": "iso:mx",
-    "autoridad": "SAT",
-    "industria": "FINANZAS",
-    "dominio": "FISCAL_RENTA"
-  },
-  "fecha_operacion": "2026-03-15",
-  "contexto": {
-    "tipo": "combustible",
-    "monto": 3000,
-    "metodo_pago": "EFECTIVO"
+  "scheme_urn": "urn:pricing:marketplace:mx",
+  "execution_date": "2024-06-15T14:30:00Z",
+  "transaction": {
+    "amount": 15000.00,
+    "currency": "MXN",
+    "payment_method": "CREDIT_CARD",
+    "merchant_tier": "ENTERPRISE"
   }
 }
 ```
 
-**Response (BLOCKER):**
+**Deterministic Response:**
 ```json
 {
-  "es_valido": false,
-  "reglas_ejecutadas": 1,
-  "detalles_fallos": [
+  "base_amount": 15000.00,
+  "calculated_fees": [
     {
-      "urn_global": "urn:lex:mx:fiscal:isr:deduccion_combustible",
-      "mensaje": "Gasto de combustible por 3000 requiere tarjeta, no EFECTIVO.",
-      "criticidad": "BLOCKER"
+      "rule_id": "8f43b2...",
+      "name": "Comisión Base 1.5%",
+      "amount": 225.00
+    },
+    {
+      "rule_id": "9a12c4...",
+      "name": "Fijo por Transacción (MXN)",
+      "amount": 3.00
     }
-  ]
-}
-```
-
-### `/verify-rule/{id}` (Cryptographic Audit)
-Verify that a rule's logic hasn't been tampered with since its publication.
-
-**POST** `/api/v1/management/verify-rule/123e4567-e89b-12d3-a456-426614174000`
-
-```json
-{
-  "valid": true,
-  "hash_match": true,
-  "stored_hash": "sha256:abcd1234...",
-  "recalculated_hash": "sha256:abcd1234...",
-  "hash_algoritmo": "SHA-256"
+  ],
+  "total_fees": 228.00,
+  "net_settlement": 14772.00,
+  "currency": "MXN",
+  "cryptographic_hash": "sha256:abcd1234efgh5678..."
 }
 ```
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Strategic Roadmap
 
-*   [ ] **Rust Core:** Rewrite the evaluation loop in Rust for sub-millisecond latency at scale.
-*   [ ] **Backoffice UI:** Visual timeline for rule management and approval workflows.
-*   [ ] **Multi-Tenancy:** Isolated rule-spaces for different organizational departments.
+*   [ ] **API-First Refactor:** Upgrade all controllers and repositories to support the new financial domain models.
+*   [ ] **Rust Core Migration:** Rewrite the evaluation engine in Rust for sub-millisecond latency to handle 100k+ TPS (High-Frequency Trading / Stripe-scale).
+*   [ ] **Batch Simulation Endpoint:** API for CFOs to send 1M transactions against a draft `PricingScheme` to forecast revenue.
+*   [ ] **Embedded SDKs:** Python and Node.js clients for instant integration.
+*   [ ] **Self-Hosted Financial UI:** A React dashboard for finance teams to manage tiers and visualize the time-travel timeline.
 
 ---
 
