@@ -1,7 +1,6 @@
 import json
 import re
 from litellm import completion
-from typing import Optional, Dict, Any
 from src.core.config import get_settings
 from src.domain.schemas.patch import PatchCandidate
 from src.domain.exceptions import LexEngineError
@@ -56,7 +55,7 @@ class LLMClient:
             )
 
             raw_content = response.choices[0].message.content
-            print(f"📄 Respuesta LLM recibida.")
+            print("📄 Respuesta LLM recibida.")
             
             # Limpiar posible formato Markdown
             cleaned_content = raw_content.strip()
@@ -87,13 +86,54 @@ class LLMClient:
             print(f"❌ Error parseando decreto con LLM: {e}")
             raise LLMParserError(f"Error parseando decreto: {str(e)}")
 
+    async def draft_universal_rule(self, texto_ley: str, schema_contexto: dict) -> dict:
+        """
+        Lee un fragmento de ley y un Esquema de Contexto, y propone un borrador
+        de logica_json y template_error listo para el Motor Universal.
+        """
+        prompt = f"""
+        Eres un experto ingeniero de software legal. Tu tarea es traducir texto de ley a una regla determinista en 'json-logic'.
+
+        ESQUEMA DE CONTEXTO ESPERADO (El payload que enviará el ERP):
+        {json.dumps(schema_contexto, indent=2)}
+
+        TEXTO DE LEY:
+        {texto_ley}
+
+        INSTRUCCIONES:
+        1. Escribe la lógica usando sintaxis json-logic pura.
+        2. La regla debe retornar `true` si se CUMPLE la ley, o `false` si hay una violación.
+        3. Genera un 'template_error' con variables del contexto precedidas por $ (ej: "Monto de $valor excedido").
+
+        Devuelve SOLO un JSON con este formato exacto:
+        {{
+            "logica_json": {{ ... json-logic ... }},
+            "template_error": "Mensaje...",
+            "tipo_obligacion": "LIMITE|REQUISITO|PROHIBICION",
+            "criticidad": "BLOCKER|WARNING|INFO"
+        }}
+        """
+
+        try:
+            response = completion(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                api_key=self.api_key,
+                response_format={"type": "json_object"}
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = re.sub(r"^```(?:json)?\n", "", raw)
+                raw = re.sub(r"\n```$", "", raw)
+            return json.loads(raw)
+        except Exception as e:
+            raise LLMParserError(f"Error generando regla universal: {e}")
+
 if __name__ == "__main__":
     # Test (mockeado)
-    import asyncio
     async def test():
-        client = LLMClient()
+        LLMClient()
         # Mock de texto de decreto
-        test_text = "DECRETO por el que se reforma el Artículo 1o. del CFF: Las personas... pagarán más."
         # try:
         #     res = await client.parse_decreto_to_patch(test_text, "https://dof.gob.mx/nota_detalle.php?codigo=56789")
         #     print(res.json())

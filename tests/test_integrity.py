@@ -3,7 +3,6 @@ from datetime import date
 from sqlalchemy.exc import IntegrityError
 from asyncpg import Range
 from src.domain.models import Norma, UnidadEstructural, VersionContenido
-from uuid import uuid4
 
 @pytest.mark.asyncio
 async def test_overlap_constraint(session):

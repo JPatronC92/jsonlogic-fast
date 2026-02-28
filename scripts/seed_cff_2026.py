@@ -14,8 +14,8 @@ from asyncpg import Range
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.infrastructure.database import AsyncSessionLocal, engine
-from src.domain.models import Norma, UnidadEstructural, VersionContenido, EstadoNorma, TipoUnidad
+from src.infrastructure.database import AsyncSessionLocal
+from src.domain.models import Norma, UnidadEstructural, VersionContenido
 from src.core.config import get_settings
 
 settings = get_settings()
