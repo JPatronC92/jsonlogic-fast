@@ -2,7 +2,6 @@ import asyncio
 from playwright.async_api import async_playwright
 from typing import List, Optional, Dict
 from datetime import date
-import re
 
 class DOFSpider:
     """
