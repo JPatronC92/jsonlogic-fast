@@ -1,0 +1,30 @@
+{
+  "name": "tempus-node",
+  "version": "1.0.0",
+  "description": "El SDK Oficial para Tempus Pricing Engine",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "tempus",
+    "pricing",
+    "billing",
+    "fintech",
+    "engine"
+  ],
+  "author": "JPatron92",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5"
+  }
+}

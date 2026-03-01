@@ -17,15 +17,5 @@ services:
       timeout: 5s
       retries: 5
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: tempus-qdrant
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - tempus_qdrant_data:/qdrant/storage
-
 volumes:
   tempus_pgdata:
-  tempus_qdrant_data:

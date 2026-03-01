@@ -26,6 +26,49 @@ class PricingEngine:
         Simula el impacto de un esquema de precios sobre un lote masivo de transacciones.
         Retorna el P&L (Profit & Loss) agregado.
         """
+        if RUST_CORE_AVAILABLE and transacciones:
+            try:
+                # 🦀 Vía Ultra Rápida (Rust Array Batch)
+                valid_tx_strings = []
+                valid_tx_amounts = []
+                local_failed_count = 0
+                local_success_count = 0
+                
+                for tx in transacciones:
+                    try:
+                        amt = float(tx.get("amount", 0.0))
+                        if amt <= 0:
+                            local_failed_count += 1
+                            continue
+                        valid_tx_amounts.append(amt)
+                        valid_tx_strings.append(json.dumps(tx))
+                        local_success_count += 1
+                    except (ValueError, TypeError):
+                        local_failed_count += 1
+
+                total_vol = sum(valid_tx_amounts)
+                fees_por_tx = [0.0] * local_success_count
+                
+                for regla_version in reglas_activas:
+                    rule_str = json.dumps(regla_version.logica_json)
+                    batch_fees = tempus_core.evaluate_batch(rule_str, valid_tx_strings)
+                    for i, fee in enumerate(batch_fees):
+                        fees_por_tx[i] += fee
+                
+                total_fees = sum(fees_por_tx)
+                total_net = total_vol - total_fees
+                
+                return BatchSimulateResponse(
+                    total_processed_volume=round(total_vol, 2),
+                    total_fees_collected=round(total_fees, 2),
+                    total_net_settlement=round(total_net, 2),
+                    transactions_count=local_success_count,
+                    failed_transactions=local_failed_count
+                )
+            except Exception as e:
+                logger.warning(f"Error en fast-path Rust Batch, fallback a iteración: {e}")
+
+        # 🐍 Fallback: Iteración transaccional
         total_vol = 0.0
         total_fees = 0.0
         total_net = 0.0

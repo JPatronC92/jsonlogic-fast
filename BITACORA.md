@@ -1,7 +1,7 @@
 # 📂 Project Bitacora: Tempus Billing & Commission Engine
 
-**Cut-off Date:** Feb 26, 2026
-**Status:** 🦄 Unicorn Pivot Executed. Transitioned from Legal Compliance to API-First Financial Billing Infrastructure.
+**Cut-off Date:** March 01, 2026
+**Status:** 🦄 Unicorn Pivot Executed. Phase 4 MVP Released.
 **Repository:** `JPatronC92/Lex-API-Mx`
 
 ---
@@ -10,61 +10,45 @@
 
 We realized that the architectural core built for "Time-Travel Legal Compliance" solves an even more painful, lucrative, and critical problem in the Fintech/SaaS industry: **Billing, Commission Splits, and Pricing Rules.**
 
-Instead of dealing with unstructured government texts and AI scrapers, we shifted the domain to pure, determinist mathematical operations. 
-
 Tempus is now the **Deterministic & Time-Travel Pricing Infrastructure**.
 
 ---
 
-## 2️⃣ Technical Inventory (Work Done in this Session) 🛠️
+## 2️⃣ Technical Inventory (Latest Accomplishments) 🛠️
 
-### A. Core Entities Refactor (Domain Driven Pivot) 🧬
-We wiped the legacy Legal/Norma models and introduced the Financial Domain in `src/domain/models.py`:
-*   `PricingScheme`: Groups multiple rules (e.g., "Marketplace Tier 1").
-*   `PricingRuleIdentity`: The immutable ID of a fee.
-*   `PricingRuleVersion`: The time-travel mathematical logic (`json-logic`).
-*   `PricingContextSchema`: JSON schema validation for payloads to prevent billing errors.
+### A. The "Speed Demon" Core (Rust 1.3M TPS) 🦀🚀
+*   **Action:** Implemented Array-Based FFI in the `tempus_core` (Rust).
+*   **Result:** Achieved **1,349,995 Transactions per second** (6.4x speedup over Python native). 
+*   **Optimization:** Eliminated the communication overhead between Python and Rust by processing transaction batches directly in the C-Layer.
 
-### B. The Financial Evaluator (Pricing Engine) 🧮
-*   Removed `compliance_engine.py` (boolean validations).
-*   Created `pricing_engine.py`. The new engine executes `json-logic` to return exact **float amounts** (fees), aggregates them, and calculates the `net_settlement`.
-*   Added cryptographic hashing of the execution state to provide irrefutable audit trails.
-*   **Security Fix:** Implemented defensive JSON Schema validation *before* payload parsing to prevent malicious inputs from breaking the math engine.
+### B. Multi-Language SDKs (The DX Hook) 📦
+*   **Node/TypeScript SDK (`tempus-node`):** Built a universal client (CJS/ESM) with strict typing, Axios integration, and full support for Batch Simulations.
+*   **Python SDK (`tempus-python`):** Created a lightweight, Pydantic-powered client based on `httpx` for data science and backend integrations.
 
-### C. Clean Slate & Seeding 🧹🌱
-*   Deleted old schemas, endpoints, and Alembic migrations.
-*   Built a streamlined API: `POST /api/v1/billing/calculate`.
-*   Created `seed_pricing.py` to inject a real-world, Stripe-like fee structure (3.6% + $3.00 MXN) directly into the Time-Travel database.
+### C. The Financial Dashboard (Next.js MVP) 🖥️📊
+*   **Action:** Developed a high-performance dashboard in Next.js (Vanilla CSS) for CFO-level visibility.
+*   **Features:** 
+    *   **Time-Travel Audit:** Real-time simulation of 100k+ transactions.
+    *   **P&L Visualization:** Interactive Recharts area charts showing projected Revenue (Fees) vs. Net Settlement (Payouts).
+    *   **Resilient Design:** Visual reporting of successful vs. failed (malformed) transactions within a batch.
+
+### D. System Cleanup & Stabilization 🧹
+*   Removed 100% of the legacy Legal/Pipeline code (Scrapers, OCR, LLM Clients, Qdrant).
+*   Refactored `PricingEngine` to use the high-speed Rust "fast-path" while maintaining a safe Python fallback.
+*   Resolved port conflicts and environment synchronization issues.
 
 ---
 
-## 3️⃣ The Launch Plan (Path to Product-Market Fit) 🚀
+## 3️⃣ The Roadmap Ahead 🚀
 
-This is our roadmap to take Tempus from a powerful backend to a globally recognized piece of financial infrastructure. We will build this as a **Developer-First Open Core** product.
+### Phase 5: The Visual Rule Builder (No-Code Pricing)
+*   **Goal:** Allow non-engineers to create complex pricing rules (Staircase, Tiers, Caps) via a Drag-and-Drop UI that generates `json-logic` under the hood.
 
-### Phase 1: The Batch Simulator (The "CFO Hook") - ✅ COMPLETED
-Engineers love the API, but CFOs write the checks. We need a killer feature that they can't live without.
-*   **Action:** Built `POST /api/v1/billing/simulate-batch` and integrated it into the core engine with robust error handling for malformed payloads.
-*   **Value:** Allows a user to throw 10,000 historical transactions at a *Draft* `PricingScheme` to instantly see the revenue impact (P&L Aggregation) and test structural changes before they hit production.
+### Phase 6: Multi-Tenant & Auth
+*   **Goal:** Secure the API for commercial use and allow multiple organizations to manage their own isolated Pricing Schemes.
 
-### Phase 2: Performance & The Rust Core (The "Engineering Hook") - ✅ COMPLETED
-Fintechs care about latency and scale. Python is great for iteration, but Rust wins the benchmarks.
-*   **Action:** Extracted the `json-logic` evaluation loop into a high-performance Rust C-Extension (`tempus_core`) using `PyO3` and `maturin`.
-*   **Result:** Achieved a **1.6x initial speedup** over native Python (from ~212k to ~338k TPS) handling raw FFI overhead. Future array-based FFI calls will push this beyond 10x. The engine gracefully falls back to Python if the Rust FFI fails, guaranteeing zero downtime.
-
-### Phase 3: Developer Experience (DX) & SDKs - *Next Immediate Step*
-If it takes more than 10 minutes to integrate, we lose.
-*   **Action:** Release `tempus-python` and `tempus-node` SDKs. 
-*   **Action:** Create an interactive local sandbox (Dockerized) so devs can write `json-logic` rules and see the output in real-time.
-
-### Phase 4: The Financial UI (The Enterprise Upsell)
-*   **Action:** Build a sleek, Next.js/React dashboard.
-*   **Features:** A visual timeline for the Time-Travel Engine (see when a rule starts and ends), a visual builder for pricing rules (no-code json-logic), and the Batch Simulation reports.
-*   **Model:** The UI and multi-tenancy are the paid "Enterprise" features, while the core engine remains Open-Core.
-
-### Phase 5: Launch Day (Product Hunt & Hacker News)
-*   **Positioning:** *"Stop writing if/else for your pricing. Tempus is the open-source, time-travel billing engine."*
-*   **Assets:** A beautiful landing page, the open-source repo with the Rust benchmarks, and a sandbox where users can break the API.
+### Phase 7: Global Launch
+*   **Goal:** Landing page, documentation portal, and public release of the open-core engine.
 
 ---
 *Signed: JPatronC92 & Tempus Co-Pilot.*

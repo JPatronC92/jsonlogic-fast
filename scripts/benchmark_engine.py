@@ -52,16 +52,27 @@ for tx_str in tx_strings:
     rust_total += fee
 
 rust_duration = time.perf_counter() - start_time
-print(f"🦀 Vía Rápida (Rust tempus_core):")
+print(f"🦀 Vía Rápida Individual (Rust tempus_core):")
 print(f"   -> Tiempo total: {rust_duration:.4f} segundos")
 print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_duration:,.0f} req/s\n")
 
+# --- BENCHMARK 3: RUST BATCH (Array-based FFI) ---
+start_time = time.perf_counter()
+
+# Pasamos toda la lista de strings de una sola vez
+batch_results = tempus_core.evaluate_batch(logica_str, tx_strings)
+rust_batch_total = sum(batch_results)
+
+rust_batch_duration = time.perf_counter() - start_time
+print(f"🚀🚀 Vía Ultra Rápida Batch (Rust tempus_core Arrays):")
+print(f"   -> Tiempo total: {rust_batch_duration:.4f} segundos")
+print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_batch_duration:,.0f} req/s\n")
 
 # --- RESULTADOS ---
-assert python_total == rust_total, "Error: ¡Los motores no dieron el mismo resultado determinista!"
+assert python_total == rust_total == rust_batch_total, "Error: ¡Los motores no dieron el mismo resultado determinista!"
 
-if rust_duration < python_duration:
-    speedup = python_duration / rust_duration
-    print(f"✅ ¡RUST ES {speedup:.1f}x MÁS RÁPIDO QUE PYTHON!")
+if rust_batch_duration < python_duration:
+    speedup = python_duration / rust_batch_duration
+    print(f"✅ ¡RUST BATCH ES {speedup:.1f}x MÁS RÁPIDO QUE PYTHON!")
 else:
     print("⚠️ Resultado inesperado. Python fue más rápido (revisar overhead de FFI).")

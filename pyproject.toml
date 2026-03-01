@@ -11,12 +11,9 @@ dependencies = [
     "greenlet>=3.3.2",
     "json-logic-qubit>=0.9.1",
     "jsonschema>=4.26.0",
-    "litellm>=1.81.15",
     "maturin>=1.12.4",
-    "playwright>=1.58.0",
     "pydantic-settings>=2.13.1",
     "python-multipart>=0.0.22",
-    "qdrant-client>=1.17.0",
     "sqlalchemy>=2.0.47",
     "uvicorn>=0.41.0",
 ]
