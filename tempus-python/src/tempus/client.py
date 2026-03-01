@@ -20,7 +20,7 @@ class TempusClient:
             timeout=timeout,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
+                "X-API-Key": self.api_key,
                 "X-Tempus-SDK": "python/0.1.0"
             }
         )

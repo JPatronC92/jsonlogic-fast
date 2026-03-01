@@ -25,7 +25,7 @@ export class TempusClient {
       timeout: options.timeout || 10000,
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${options.apiKey}`,
+        "X-API-Key": options.apiKey,
         "X-Tempus-SDK": "node/1.0.0",
       },
     });
@@ -73,8 +73,7 @@ export class TempusClient {
     if (error.response) {
       // El servidor respondió con un status code fuera del rango 2xx
       throw new Error(
-        `Tempus API Error [${error.response.status}]: ${
-          error.response.data?.detail || JSON.stringify(error.response.data) || error.message
+        `Tempus API Error [${error.response.status}]: ${error.response.data?.detail || JSON.stringify(error.response.data) || error.message
         }`
       );
     } else if (error.request) {
