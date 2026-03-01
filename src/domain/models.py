@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Optional
 from sqlalchemy import (
     String, ForeignKey,
-    Text, Integer, DateTime
+    Text, Integer, DateTime, Boolean
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, DATERANGE
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -15,24 +15,55 @@ from sqlalchemy.dialects.postgresql import ExcludeConstraint
 class Base(DeclarativeBase):
     pass
 
+class Tenant(Base):
+    """Organización o empresa dueña de las reglas de pricing."""
+    __tablename__ = "tenants"
+
+    id: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
+    name: Mapped[str] = mapped_column(String, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    api_keys = relationship("APIKey", back_populates="tenant", cascade="all, delete-orphan")
+    schemes = relationship("PricingScheme", back_populates="tenant", cascade="all, delete-orphan")
+    context_schemas = relationship("PricingContextSchema", back_populates="tenant", cascade="all, delete-orphan")
+
+class APIKey(Base):
+    """Clave de acceso para la integración B2B vía SDK."""
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
+    tenant_id: Mapped[uuid_pkg.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    tenant = relationship("Tenant", back_populates="api_keys")
+
+
 class PricingContextSchema(Base):
     """Schema JSON para validar el payload de la transacción antes de cobrar."""
     __tablename__ = "pricing_context_schemas"
 
     id: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
-    name: Mapped[str] = mapped_column(String, unique=True, index=True) # Ej: "Marketplace TX Payload"
+    tenant_id: Mapped[uuid_pkg.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, index=True) # Removed unique=True because names can repeat across tenants
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     schema_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+
+    tenant = relationship("Tenant", back_populates="context_schemas")
 
 class PricingScheme(Base):
     """Agrupa múltiples reglas. Ej: 'Marketplace Standard MX', 'Enterprise VIP'"""
     __tablename__ = "pricing_schemes"
 
     id: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid_pkg.uuid4)
+    tenant_id: Mapped[uuid_pkg.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False)
     urn: Mapped[str] = mapped_column(String, unique=True, index=True) # Ej: urn:pricing:marketplace:mx
     name: Mapped[str] = mapped_column(String)
     description: Mapped[Optional[str]] = mapped_column(String)
     
+    tenant = relationship("Tenant", back_populates="schemes")
     rules = relationship("PricingRuleIdentity", back_populates="scheme", cascade="all, delete-orphan")
 
 class PricingRuleIdentity(Base):
