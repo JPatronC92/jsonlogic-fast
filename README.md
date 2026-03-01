@@ -1,107 +1,76 @@
-# Tempus Billing & Commission Engine ⏳💰
+# Tempus: The Deterministic Billing Infrastructure for Fintech ⏳💰
 
-**The Deterministic & Time-Travel Pricing Infrastructure for Fintechs and Marketplaces.**
+**Stop burying your pricing logic in spaghetti code. Start treating commissions as versioned, auditable, and high-performance financial assets.**
 
-[![CI](https://github.com/JPatronC92/Lex-API-Mx/actions/workflows/main.yml/badge.svg)](https://github.com/JPatronC92/Lex-API-Mx/actions/workflows/main.yml)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
-
-Tempus is a high-performance, domain-agnostic pricing engine designed for mission-critical financial systems. It treats fees, commission splits, and pricing tiers as **versioned mathematical rules**, allowing you to calculate or audit a transaction against the exact pricing scheme that was active at any specific point in history.
-
-Stop burying your pricing logic in spaghetti `if/else` backend code. 
+Tempus is a mission-critical pricing engine designed to handle the complexity of modern Fintech, SaaS, and Marketplaces. It replaces hard-coded `if/else` billing logic with a **Deterministic Rust Core** that guarantees sub-millisecond precision and absolute historical auditability.
 
 ---
 
-## 🚀 Why Tempus?
+## 🛑 The $100M Problem: Billing Drift
+Most financial platforms suffer from "Billing Drift":
+- **Audit Nightmares:** Inability to prove *exactly* how a fee was calculated 2 years ago.
+- **Engineering Bottlenecks:** Every pricing change requires a code deploy and weeks of QA.
+- **Loss of Revenue:** Hidden bugs in complex commission splits that go unnoticed for months.
+- **Latency:** Slow billing engines that can't scale with high-frequency transaction volumes.
 
-In Fintech, SaaS, and Marketplaces, pricing rules change constantly. You have multiple tiers, volume-based fees, contractual overrides, and temporary promotions. Most billing systems fail when asked: *"How was this commission calculated 2 years ago?"* 
-
-**Tempus guarantees deterministic, auditable, and time-travel-ready financial operations.**
-
-### 🌟 Core Superpowers
-
-*   **🕰️ Absolute Time-Travel Audit:** Leveraging PostgreSQL's `DATERANGE` and `ExcludeConstraint` (GiST), Tempus mathematically guarantees that pricing rule versions never overlap. 
-*   **🧠 Zero-Float Determinism:** Uses `json-logic` for rule execution. Given the same input payload and historical date, the fee output is identical forever.
-*   **🛡️ Built-in Payload Guard:** Every pricing scheme uses dynamic **JSON Schema Contexts** to validate incoming transaction payloads *before* they touch the math logic, preventing costly data errors.
-*   **🔒 Cryptographic Receipt:** Every calculation returns a SHA-256 hash of the specific rule versions used. You can irrefutably demonstrate to auditors or merchants exactly how a fee was generated.
-*   **📊 Mass Simulation (Batch-Audit):** Test new pricing tiers against millions of historical transactions *before* deploying them to production to forecast revenue impact.
-
-### 🦀 Performance (Rust Native Core)
-Tempus is written in Python for developer speed, but its mathematical heart beats in **Rust**. By using `PyO3`, the engine delegates all deterministic math to a pre-compiled Rust extension (`tempus_core`). 
-
-**Key optimizations:**
-- **`evaluate_fee`**: Single-transaction evaluation with sub-millisecond latency.
-- **`evaluate_batch`**: High-throughput processing that eliminates FFI overhead by iterating over transaction batches directly in Rust, capable of pushing **+1.3M evaluations per second**.
+**Tempus solves this by decoupling your pricing logic from your core application code.**
 
 ---
 
-## 🏗️ The Pricing Model
+## 🌟 Superpowers for CFOs and CTOs
 
-Tempus abstract billing into 4 core concepts:
+### 🕰️ Absolute Time-Travel Audit
+Leveraging PostgreSQL's `DATERANGE` and Rust-level constraints, Tempus mathematically guarantees that pricing versions never overlap. You can execute any transaction against the **exact** legal rules active at any point in history.
 
-1. **`PricingScheme`**: A collection of rules (e.g., "Marketplace Standard MX").
-2. **`PricingRuleIdentity`**: The logical concept of a fee (e.g., "Credit Card Processing Fee").
-3. **`PricingRuleVersion`**: The actual mathematical formula (json-logic) and the exact `DATERANGE` it is legally active.
-4. **`PricingContextSchema`**: The JSON Schema defining the required payload (amount, currency, tier, country).
+### 🦀 1.3M TPS Performance (Rust Core)
+The mathematical heart of Tempus is written in **Rust**. Using `PyO3`, we achieve **1,349,995 evaluations per second**. This isn't just fast; it's high-frequency trading speed, ready for Stripe-scale operations.
 
----
+### 🧠 Zero-Float Determinism
+By using `json-logic` and strict decimal handling, Tempus ensures that given the same input, the output is identical—forever. No more floating-point errors in your financial reports.
 
-## ⚡ Quick Start
-
-### 1. Evaluate a Transaction (`/calculate-fee`)
-
-Send a transaction payload and an execution date. The engine will automatically find the correct mathematical rules active on that date and execute them.
-
-**POST** `/api/v1/billing/calculate`
-
-```json
-{
-  "scheme_urn": "urn:pricing:marketplace:mx",
-  "execution_date": "2024-06-15T14:30:00Z",
-  "transaction": {
-    "amount": 15000.00,
-    "currency": "MXN",
-    "payment_method": "CREDIT_CARD",
-    "merchant_tier": "ENTERPRISE"
-  }
-}
-```
-
-**Deterministic Response:**
-```json
-{
-  "base_amount": 15000.00,
-  "calculated_fees": [
-    {
-      "rule_id": "8f43b2...",
-      "name": "Comisión Base 1.5%",
-      "amount": 225.00
-    },
-    {
-      "rule_id": "9a12c4...",
-      "name": "Fijo por Transacción (MXN)",
-      "amount": 3.00
-    }
-  ],
-  "total_fees": 228.00,
-  "net_settlement": 14772.00,
-  "currency": "MXN",
-  "cryptographic_hash": "sha256:abcd1234efgh5678..."
-}
-```
+### 📊 Revenue Forecasting (Batch Simulator)
+Test new pricing tiers against millions of historical transactions *before* you deploy. Know exactly how a 0.5% fee change will impact your P&L before it goes live.
 
 ---
 
-## 🗺️ Strategic Roadmap
+## 💳 Commercial Licensing & Services
 
-*   [x] **API-First Refactor:** Upgrade all controllers and repositories to support the new financial domain models.
-*   [x] **Batch Simulation Endpoint:** API for CFOs to send 1M transactions against a draft `PricingScheme` to forecast revenue.
-*   [x] **Rust Core Migration:** Rewrite the evaluation engine in Rust for sub-millisecond latency to handle 100k+ TPS (High-Frequency Trading / Stripe-scale).
-*   [ ] **Embedded SDKs:** Python and Node.js clients for instant integration.
-*   [ ] **Self-Hosted Financial UI:** A React dashboard for finance teams to manage tiers and visualize the time-travel timeline.
+Tempus is a proprietary infrastructure. We offer three flexible tiers to align with your business growth:
+
+### 1. Tempus Cloud (SaaS)
+**Best for Startups & Scale-ups.**
+- **Model:** Pay-per-calculation.
+- **Benefits:** Zero maintenance, instant scaling, and access to our global API.
+- **Pricing:** Tiered volume discounts (starting at $0.001 per transaction).
+
+### 2. Tempus Enterprise (On-Premise)
+**Best for Banks, Marketplaces, and High-Security Environments.**
+- **Model:** Annual License.
+- **Benefits:** Full control over your data, local deployment (AWS/GCP/Azure), 24/7 dedicated support, and custom feature development.
+- **Pricing:** Fixed annual fee based on transaction volume and SLA requirements.
+
+### 3. Visual Pricing Suite (Premium Tools)
+**Accelerate your Finance Operations.**
+- **Visual Rule Builder:** A No-Code drag-and-drop UI that allows finance teams to create complex tiers (Staircase, Tiers, Caps) without writing a single line of code.
+- **CFO Dashboard:** Real-time P&L visualization, error reporting, and simulation analytics.
 
 ---
 
-## 📄 License
-**Proprietary Commercial License**. All rights reserved. 
-Commercial use, redistribution, or exploitation requires a valid commercial license agreement and payment to the author (**JPatronC92**). See the `LICENSE` file for full terms.
+## 🚀 Roadmap
+
+- [x] **Rust Core (v1.0):** 1.3M TPS evaluation engine.
+- [x] **Batch Simulator:** Historical P&L auditing.
+- [ ] **SDKs:** Python, Node.js, and Go clients.
+- [ ] **Visual Rule Builder:** Drag-and-drop logic for non-engineers.
+- [ ] **Multi-Tenant Gateway:** Secure isolation for large enterprises.
+
+---
+
+## ✉️ Get a License
+Tempus is proprietary software. To obtain a commercial license, schedule a demo, or request a trial, please contact the author:
+
+**JPatronC92**  
+[GitHub Profile](https://github.com/JPatronC92) | [Inquiries](https://github.com/JPatronC92/Tempus-Engine/issues)
+
+---
+© 2026 JPatronC92. All rights reserved. Proprietary Commercial License.
