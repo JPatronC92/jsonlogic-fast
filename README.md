@@ -60,9 +60,9 @@ Tempus is a proprietary infrastructure. We offer three flexible tiers to align w
 
 - [x] **Rust Core (v1.0):** 1.3M TPS evaluation engine.
 - [x] **Batch Simulator:** Historical P&L auditing.
-- [ ] **SDKs:** Python, Node.js, and Go clients.
-- [ ] **Visual Rule Builder:** Drag-and-drop logic for non-engineers.
-- [ ] **Multi-Tenant Gateway:** Secure isolation for large enterprises.
+- [x] **High-Performance SDKs:** Python (Pydantic/httpx) and Node.js (TypeScript) global clients.
+- [x] **Visual Rule Builder:** No-Code UI for finance teams to generate deterministic JSON-Logic.
+- [x] **Multi-Tenant Gateway:** Secure JWT & API Key isolation for B2B/SaaS scale operations.
 
 ---
 

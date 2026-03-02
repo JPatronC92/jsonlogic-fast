@@ -41,18 +41,22 @@ Tempus is now the **Deterministic & Time-Travel Pricing Infrastructure**.
 
 ## 3️⃣ The Roadmap Ahead 🚀
 
-### Phase 5: The Visual Rule Builder (No-Code Pricing)
+### Phase 5: The Visual Rule Builder (No-Code Pricing) ✅ Completed
 *   **Goal:** Allow non-engineers to create complex pricing rules (Staircase, Tiers, Caps) via a Drag-and-Drop UI that generates `json-logic` under the hood.
+*   **Action:** Developed a complete Next.js React component for visual rule generation and backend FastAPI endpoints to store the `json-logic` in PostgreSQL.
 
-### Phase 6: Multi-Tenant & Auth
+### Phase 6: Multi-Tenant & Auth ✅ Completed
 *   **Goal:** Secure the API for commercial use and allow multiple organizations to manage their own isolated Pricing Schemes.
+*   **Action:** Implemented a robust security layer (`security.py`) supporting both JWT for Dashboard users and API Keys for B2B/SDK access. Refactored the database to ensure strict cross-tenant isolation. Updated Node and Python SDKs to use `X-API-Key`.
 
-### Phase 7: Global Launch
+### Phase 7: Global Launch 🚀 In Progress
 *   **Goal:** Landing page, documentation portal, and public release of the open-core engine.
 
 ---
 
-## 🛑 Audit & Security Check (Feb 28, 2026)
+## 🛑 Audit & Security Check (March 01, 2026)
+*   **Auth & Multi-Tenancy:** Successfully integrated and tested database-level isolation and API key validation. All API routes secured.
+*   **No-Code Builder Validation:** The React-based Rule Builder correctly translates visual tiers into deterministic `json-logic` ready for Rust evaluation.
 *   **Rust Migration Audit:** Verified `tempus_core` implementation. Functions `evaluate_fee` and `evaluate_batch` are fully operational and integrated via `PyO3`. Batch performance validated at **1.3M TPS**.
 *   **Legal Pivot:** License migrated from MIT to **Proprietary Commercial License**. All documentation (README, LICENSE) updated to reflect commercial restrictions.
 *   **GitHub Integrity:** Verified Personal Access Token (PAT) permissions and synchronized remote repository.

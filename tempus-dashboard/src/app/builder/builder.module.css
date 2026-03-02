@@ -1,0 +1,95 @@
+.select {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.conditionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.selectSmall, .inputSmall {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.inputSmall {
+  width: 80px;
+}
+
+.btnRemove {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.2s;
+}
+
+.btnRemove:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btnAdd {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+  padding: 0.75rem;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.btnAdd:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.codePreview {
+  background: #0f172a;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  color: #10b981;
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  overflow-x: auto;
+  min-height: 200px;
+}
+
+.successMsg {
+  color: var(--success);
+  margin-top: 1rem;
+  font-weight: 500;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
