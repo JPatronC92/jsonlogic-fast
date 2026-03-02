@@ -24,14 +24,17 @@ services:
       dockerfile: Dockerfile
     container_name: tempus-api
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/tempus_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_SERVER=db
+      - POSTGRES_DB=tempus_db
       - SECRET_KEY=super_secret_jwt_key_for_production
-      # In production, wait for the DB to be ready and run alembic migrations before starting
+      - ENVIRONMENT=production
     command: >
       bash -c "alembic upgrade head && uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000"
 

@@ -4,7 +4,6 @@ from typing import Dict, Any, List, Optional
 from uuid import UUID
 from datetime import date
 from sqlalchemy import select
-from psycopg2.extras import DateRange
 
 from src.interfaces.api.dependencies import SessionDep
 from src.core.security import get_current_tenant
@@ -80,10 +79,7 @@ async def add_rule_version(scheme_id: UUID, request: RuleVersionCreate, session:
     await session.flush() # Get the UUID
 
     # 3. Add the Rule Version
-    # asyncpg uses a different format for ranges, but SQLAlchemy's DATERANGE handles psycopg2.extras.DateRange usually.
-    # In asyncpg it's expected to pass asyncpg.Range. SQLAlchemy handles the translation or we use internal types.
-    from psycopg2.extras import DateRange
-    # Since asyncpg handles ranges, we can try with a tuple (lower, upper, bounds) or just a native postgres string.
+    # asyncpg handles ranges natively when passed as strings.
     # To be safe across drivers:
     
     # For simplicity, we assume the vigencia starts today and goes forward forever.
