@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   db:
     image: postgres:16
@@ -12,10 +13,39 @@ services:
     volumes:
       - tempus_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tempus-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/tempus_db
+      - SECRET_KEY=super_secret_jwt_key_for_production
+      # In production, wait for the DB to be ready and run alembic migrations before starting
+    command: >
+      bash -c "alembic upgrade head && uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000"
+
+  dashboard:
+    build:
+      context: ./tempus-dashboard
+      dockerfile: Dockerfile
+    container_name: tempus-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000
 
 volumes:
   tempus_pgdata:

@@ -1,0 +1,27 @@
+site_name: Tempus Billing Infrastructure
+site_description: Deterministic Pricing & Commission Engine Documentation
+site_author: JPatronC92
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: blue
+
+nav:
+  - Home: index.md
+  - REST API Guide: api.md
+  - SDKs:
+      - Python SDK: sdk_python.md
+      - Node.js SDK: sdk_node.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
