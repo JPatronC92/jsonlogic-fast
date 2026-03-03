@@ -1,7 +1,7 @@
 # 📂 Project Bitacora: Tempus Billing & Commission Engine
 
-**Cut-off Date:** March 02, 2026
-**Status:** 🚀 Phase 7 Near-Complete. Production Docker Stack Validated.
+**Cut-off Date:** March 03, 2026
+**Status:** 🧹 Phase 7 Complete. Codebase Audited & Cleaned. Docker Stack Validated.
 **Repository:** `JPatronC92/Tempus-Engine`
 
 ---
@@ -85,8 +85,59 @@ Tempus is now the **Deterministic & Time-Travel Pricing Infrastructure**.
 
 ---
 
-## 🔜 Remaining: Deploy to Cloud Run (GCP)
-*   The final step in the roadmap. To be executed in the next session.
+## 5️⃣ Session Log — March 03, 2026 🧹🔍
+
+### A. Full Repository Audit 🔍
+*   **Action:** Performed a complete, file-by-file audit of all 6 monorepo components (Python Backend, Rust Core, Node SDK, Python SDK, Dashboard, Scripts/Tests).
+*   **Method:** Read every source file and cross-referenced all imports to identify genuinely dead code (0 references).
+*   **Result:** Identified 7 dead/orphaned files, 4 security issues, 5 legacy naming issues, 3 functional bugs, and 2 infrastructure problems.
+
+### B. Dead Code Removal (-234 lines) 🗑️
+*   **Deleted 5 files:**
+    *   `main.py` — Legacy "Hello from lex-mx-engine!" entrypoint (0 references).
+    *   `src/domain/exceptions.py` — 4 unused exceptions (`LexEngineError`, `VigenciaOverlapError`, `UnidadNoEncontradaError`, `PatchError`). Zero imports across the entire codebase.
+    *   `src/domain/schemas/management.py` — Orphaned schemas from the old legal compliance engine (`dominio_id`, `urn_global`, `criticidad`). Zero imports.
+    *   `src/core/cache.py` — `SimpleTTLCache` class and `rule_cache` singleton never used anywhere.
+    *   `scripts/seed_pricing.py` — Broken duplicate of `seed.py` (missing `tenant_id`, destructive `DROP ALL`).
+
+### C. Security & Config Fixes 🔐
+*   `database.py`: Changed `echo=True` (hardcoded) → `echo=(settings.ENVIRONMENT == "local")` to prevent SQL logging in production.
+*   `security.py`: Removed dead `get_password_hash(api_key)` bcrypt call and 10 lines of contradictory comments.
+*   `docker-compose.yml`: Removed deprecated `version: '3.8'` key.
+*   `.gitignore`: Replaced legacy `lex_pgdata/`, `qdrant_data/` with `tempus_pgdata/`.
+*   Confirmed `.env` is not tracked by git (secrets protected).
+
+### D. Naming & Legacy Cleanup 📝
+*   `pyproject.toml`: `tempus-rule-engine` → `tempus-engine`.
+*   `config.py`: `PROJECT_NAME` → `"Tempus Pricing Engine"`.
+*   `tempus-node/example.ts`: Fixed `scheme_id` → `scheme_urn`, added missing `execution_date`.
+
+### E. Lint & Structure 🧹
+*   Fixed 5 ruff lint errors: removed unused imports (`date`, `Text`, `Field`, `PricingContextSchema`), added `noqa: E712` for SQLAlchemy `== True`.
+*   Created 9 missing `__init__.py` files across the `src/` package tree.
+*   **Final ruff:** 0 errors. **Final pytest:** 5/5 passed.
+
+### F. Local Stack Verification ✅
+*   Rebuilt and validated the full Docker Compose stack: `tempus-db` (healthy), `tempus-api` (Alembic migrated, Uvicorn serving on 8001), `tempus-dashboard` (serving on 3000).
+*   API root endpoint responding correctly.
+
+### G. Git & Sync 🔄
+*   All audit changes committed to `main`. Repository clean.
+
+---
+
+## 🔜 Roadmap & Next Steps: The Hybrid Model & First Client
+
+### 🏗️ Architectural Direction: The Hybrid Model
+We are formalizing the separation of Tempus into two distinct layers to unlock both SaaS and On-Premise Enterprise licensing:
+1. **`tempus-core` (The Engine):** 100% pure Rust. Mathematically deterministic, stateless, zero database dependencies, zero network I/O. Built to be embedded anywhere (Wasm, Node, Python, On-Premise).
+2. **`tempus-platform` (The Control Plane):** FastAPI + PostgreSQL. Handles multi-tenancy, API keys, JSON schema versioning, audit logs, and REST/GraphQL endpoints.
+
+### 🚀 Immediate Action: Production Infrastructure
+To transition from development to a production-ready state, we are migrating from local Docker to a fully managed Google Cloud Platform (GCP) stack:
+1. **Cloud SQL (PostgreSQL 16):** Provision the production database for `tempus-platform`. Apply Alembic migrations and ensure DATERANGE GiST indexes are active to support high-performance time-travel queries.
+2. **Cloud Run:** Deploy the stateless FastAPI container (with embedded `tempus-core`). Configure Secret Manager, fine-tune concurrency for Rayon parallel processing, and set up VPC connections to Cloud SQL.
+3. **Validation:** Execute full batch simulation tests against the live endpoint to measure true network latency and scaling performance under load.
 
 ---
 *Signed: JPatronC92 & Tempus Co-Pilot.*
