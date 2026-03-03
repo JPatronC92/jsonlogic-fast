@@ -45,24 +45,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 async def get_tenant_by_api_key(api_key: str, db: AsyncSession) -> Optional[Tenant]:
-    """Retrieve the tenant associated with a given API Key hash."""
-    # Assuming the API Key passed is already hashed or we do a simple query
-    # In a prod environment, the raw API key should be hashed. For MVP we'll query directly
-    # (or you hash it before querying)
-    hashed_key = get_password_hash(api_key) # If stored hashed, you must check all keys, or store the hash properly
-    # Actually, passlib's verify is used for bcrypt because the hash changes. 
-    # Usually API keys are SHA-256 hashed once if we want to query them quickly.
-    # To keep it simple, we'll assume `key_hash` is just the plain key for MVP or we query and verify.
-    # We will refine this later if needed. For now, we search by `key_hash` assuming a fast hash like SHA256 is used.
-    # If the user wants bcrypt, we'd have to load all API keys, which is slow.
-    # Let's assume `key_hash` is a simple SHA256 hex digest for API Keys.
+    """Retrieve the tenant associated with a given API Key (SHA-256 hashed)."""
     import hashlib
     sha256_hash = hashlib.sha256(api_key.encode()).hexdigest()
 
     result = await db.execute(
         select(APIKey)
         .options(selectinload(APIKey.tenant))
-        .where(APIKey.key_hash == sha256_hash, APIKey.is_active == True)
+        .where(APIKey.key_hash == sha256_hash, APIKey.is_active == True)  # noqa: E712
     )
     api_key_obj = result.scalar_one_or_none()
     if api_key_obj:

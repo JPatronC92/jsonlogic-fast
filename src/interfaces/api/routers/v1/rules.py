@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 from uuid import UUID
 from datetime import date
@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from src.interfaces.api.dependencies import SessionDep
 from src.core.security import get_current_tenant
-from src.domain.models import Tenant, PricingScheme, PricingRuleIdentity, PricingRuleVersion, PricingContextSchema
+from src.domain.models import Tenant, PricingScheme, PricingRuleIdentity, PricingRuleVersion
 
 router = APIRouter()
 

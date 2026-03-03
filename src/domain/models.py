@@ -1,9 +1,9 @@
 import uuid as uuid_pkg
-from datetime import date, datetime
+from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
     String, ForeignKey,
-    Text, Integer, DateTime, Boolean
+    Integer, DateTime, Boolean
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, DATERANGE
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
