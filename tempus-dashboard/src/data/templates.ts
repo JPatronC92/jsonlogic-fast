@@ -77,10 +77,12 @@ export const TEMPLATES: PricingTemplate[] = [
             },
         ],
         sampleTransactions: [
-            { amount: 250 }, { amount: 500 }, { amount: 1500 },
-            { amount: 3000 }, { amount: 7500 }, { amount: 15000 },
-            { amount: 25000 }, { amount: 100 }, { amount: 50000 },
-            { amount: 800 },
+            // Distribución hiper-realista: 60% micro/pequeñas, 30% medianas, 10% grandes/B2B
+            { amount: 12.50 }, { amount: 24.99 }, { amount: 15.00 }, { amount: 35.50 }, { amount: 8.99 },
+            { amount: 45.00 }, { amount: 19.99 }, { amount: 29.90 }, { amount: 55.00 }, { amount: 14.50 },
+            { amount: 89.99 }, { amount: 120.00 }, { amount: 150.50 }, { amount: 249.99 }, { amount: 320.00 },
+            { amount: 450.00 }, { amount: 680.00 }, { amount: 850.00 }, { amount: 1200.00 }, { amount: 2450.50 },
+            { amount: 3500.00 }, { amount: 5400.00 }, { amount: 8900.00 }, { amount: 14500.00 }, { amount: 28000.00 }
         ],
     },
     {
