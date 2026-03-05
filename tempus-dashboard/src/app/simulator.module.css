@@ -437,6 +437,14 @@
     border-radius: 12px;
     padding: 1.25rem;
     text-align: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.statCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
 }
 
 .statCard h3 {
@@ -619,6 +627,63 @@
 
 .consoleLabel {
     color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Tooltip Jargon Buster */
+.jargonTooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+    color: #94a3b8;
+}
+
+.jargonTooltip:hover {
+    color: #38bdf8;
+}
+
+.jargonTooltip .tooltipText {
+    visibility: hidden;
+    width: 200px;
+    background-color: #1e293b;
+    color: #f8fafc;
+    text-align: center;
+    border-radius: 6px;
+    padding: 0.5rem;
+    position: absolute;
+    z-index: 10;
+    bottom: 150%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.75rem;
+    font-family: var(--font-geist-sans), sans-serif;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    line-height: 1.4;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.jargonTooltip .tooltipText::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1e293b transparent transparent transparent;
+}
+
+.jargonTooltip:hover .tooltipText {
+    visibility: visible;
+    opacity: 1;
 }
 
 .consoleVal {
@@ -629,6 +694,64 @@
 /* AUDIT TRAIL */
 .feeTable {
     margin-bottom: 2rem;
+    position: relative;
+}
+
+/* EMPTY STATE SKELETON */
+.resultsEmptyState {
+    position: relative;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem 2rem 2rem;
+}
+
+.blurredContent {
+    filter: blur(8px);
+    opacity: 0.4;
+    pointer-events: none;
+    user-select: none;
+}
+
+.emptyOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.emptyOverlayCard {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2rem 3rem;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.emptyTitle {
+    color: #f1f5f9;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.emptySubtitle {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    max-width: 250px;
+    line-height: 1.5;
 }
 
 .feeTable h3 {
@@ -719,24 +842,34 @@
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.downloadBigBtn {
-    background: linear-gradient(135deg, #10b981, #059669);
+.primaryButton {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     border: none;
     color: white;
     padding: 1.2rem 3rem;
     border-radius: 12px;
-    font-weight: 800;
     font-size: 1.2rem;
+    font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    transition: all 0.2s ease;
     font-family: inherit;
-    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
 }
 
-.downloadBigBtn:hover {
+.primaryButton:hover {
     transform: translateY(-2px);
-    box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.5);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5), 0 0 15px rgba(99, 102, 241, 0.4);
+}
+
+.primaryButton:disabled {
+    background: #475569;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .shareNote {
@@ -872,7 +1005,7 @@
     }
 
     .statsRow {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
     }
 
     .speedBanner {
@@ -894,5 +1027,20 @@
 
     .volumeSelector {
         flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .statsRow {
+        grid-template-columns: 1fr;
+    }
+
+    .consoleRow {
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .templateGrid {
+        grid-template-columns: 1fr;
     }
 }

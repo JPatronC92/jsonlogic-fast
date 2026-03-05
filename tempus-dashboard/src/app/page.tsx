@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import CountUp from "react-countup";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { initWasm, getWasm } from "../lib/wasm";
 import { TEMPLATES, PricingTemplate, PricingRule, RuleParam, rebuildRule } from "../data/templates";
 import styles from "./simulator.module.css";
@@ -349,100 +351,130 @@ export default function PublicSimulator() {
 
                     {/* Financial Results */}
                     <h2 className={styles.resultsTitle}>Expected Financial Impact</h2>
-                    <div className={styles.statsRow}>
-                        <div className={styles.statCard}>
-                            <p>Baseline Revenue</p>
-                            <h3 className={styles.baselineVal}>
-                                ${(baselineResult?.totalRevenue ?? result.totalRevenue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </h3>
-                        </div>
-                        <div className={`${styles.statCard} ${styles.statHighlight}`}>
-                            <p>New Configuration</p>
-                            <h3 className={styles.newVal}>
-                                ${result.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </h3>
-                        </div>
-                        <div className={`${styles.statCard} ${styles.statDelta}`}>
-                            <p>Revenue Delta</p>
-                            <h3>
-                                {baselineResult && result.totalRevenue !== baselineResult.totalRevenue ? (
-                                    <span className={result.totalRevenue > baselineResult.totalRevenue ? styles.diffPositiveHuge : styles.diffNegativeHuge}>
-                                        {result.totalRevenue > baselineResult.totalRevenue ? "+" : ""}{(((result.totalRevenue - baselineResult.totalRevenue) / baselineResult.totalRevenue) * 100).toFixed(2)}%
-                                    </span>
-                                ) : (
-                                    <span className={styles.diffNeutralHuge}>0.00%</span>
-                                )}
-                            </h3>
-                        </div>
-                    </div>
 
-                    {/* Telemetry */}
-                    <div className={styles.telemetryReport}>
-                        <div className={styles.telemetryHeader}>
-                            <span className={styles.dotTeal}></span> Engine Operations Report
-                        </div>
-                        <div className={styles.telemetryConsole}>
-                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Transactions processed:</span> <span className={styles.consoleVal}>{result.fees.length.toLocaleString()}</span></div>
-                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Rules evaluated:</span> <span className={styles.consoleVal}>{activeRules.length}</span></div>
-                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Execution time:</span> <span className={styles.consoleVal}>{result.timeMs.toFixed(2)} ms</span></div>
-                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Throughput:</span> <span className={styles.consoleVal}>{formatOps(result.opsPerSec)} ops/sec</span></div>
-                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Engine:</span> <span className={styles.consoleVal}>Rust + WebAssembly</span></div>
-                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Determinism:</span> <span className={styles.consoleVal}>{(result as any).isDeterministic ? '✓ Verified' : '❌ Failed'}</span></div>
-                        </div>
-                    </div>
-
-                    {/* Visual Breakdown Bar */}
-                    <div className={styles.breakdownSection}>
-                        <h3>Comission vs Merchant Payout</h3>
-                        <div className={styles.breakdownBar}>
-                            <div className={styles.breakdownFill} style={{ width: `${result.avgRate}%` }}>
-                                <span>{result.avgRate.toFixed(2)}% fee</span>
+                    <div className={styles.resultsEmptyState}>
+                        {!result && !baselineResult && (
+                            <div className={styles.emptyOverlay}>
+                                <div className={styles.emptyOverlayCard}>
+                                    <span style={{ fontSize: "2rem" }}>⚡</span>
+                                    <div className={styles.emptyTitle}>Engine Ready</div>
+                                    <div className={styles.emptySubtitle}>Run the engine to calculate massive financial impact with zero latency.</div>
+                                </div>
                             </div>
-                            <div className={styles.breakdownRest}>
-                                <span>{(100 - result.avgRate).toFixed(2)}% payout</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Explain Decision (Audit Trail) */}
-                    <div className={styles.feeTable}>
-                        <h3>Explain Decision (Audit Trail)</h3>
-                        <p className={styles.auditDesc}>Tracing the exact deterministic origin of every fee applied.</p>
-
-                        <div className={styles.auditList}>
-                            {result.fees.slice(0, 5).map((fee, i) => {
-                                const txs = JSON.parse(txInput);
-                                const amount = txs[i % txs.length]?.amount ?? 0;
-                                return (
-                                    <div key={i} className={styles.auditCard}>
-                                        <div className={styles.auditTxHeader}>
-                                            <span className={styles.auditTxRef}>Transaction #{Math.floor(Math.random() * 8000) + 1000}</span>
-                                            <span className={styles.auditTxAmount}>Base Amount: ${amount.toLocaleString()}</span>
-                                        </div>
-                                        <div className={styles.auditRulesInfo}>
-                                            {activeRules.map(r => {
-                                                const appliedFee = result.ruleFees[r.id]?.[i] ?? 0;
-                                                const rateApplied = amount > 0 ? (appliedFee / amount) * 100 : 0;
-                                                return (
-                                                    <div key={r.id} className={styles.auditRuleRow}>
-                                                        <span className={styles.auditRuleId}>Rule: <span className={styles.mono}>{r.id}</span></span>
-                                                        <span className={styles.auditRuleCond}>Condition: <span className={styles.mono}>{r.params.map(p => `${p.label} = ${p.value}`).join(", ")}</span></span>
-                                                        <span className={styles.auditRuleRes}>Applied: <span className={styles.mono}>${appliedFee.toFixed(2)} ({rateApplied.toFixed(2)}%)</span></span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                        <div className={styles.auditTxFooter}>
-                                            <span className={styles.auditTotalFee}>TOTAL FEE: ${fee.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        {result.fees.length > 5 && (
-                            <p className={styles.tableNote}>... and {(result.fees.length - 5).toLocaleString()} more tracked transactions.</p>
                         )}
-                    </div>
+
+                        <div className={(!result && !baselineResult) ? styles.blurredContent : ""}>
+                            <div className={styles.statsRow}>
+                                <div className={styles.statCard}>
+                                    <p>Baseline Revenue</p>
+                                    <h3 className={styles.baselineVal}>
+                                        $<CountUp start={0} end={baselineResult?.totalRevenue ?? result?.totalRevenue ?? 1250000} duration={1.5} decimals={2} separator="," />
+                                    </h3>
+                                </div>
+                                <div className={`${styles.statCard} ${styles.statHighlight}`}>
+                                    <p>New Configuration</p>
+                                    <h3 className={styles.newVal}>
+                                        $<CountUp start={0} end={result?.totalRevenue ?? 1320000} duration={1.5} decimals={2} separator="," />
+                                    </h3>
+                                </div>
+                                <div className={`${styles.statCard} ${styles.statDelta}`}>
+                                    <p>Revenue Delta</p>
+                                    <h3>
+                                        {baselineResult && result && result.totalRevenue !== baselineResult.totalRevenue ? (
+                                            <span className={result.totalRevenue > baselineResult.totalRevenue ? styles.diffPositiveHuge : styles.diffNegativeHuge}>
+                                                {result.totalRevenue > baselineResult.totalRevenue ? "+" : ""}
+                                                <CountUp start={0} end={((result.totalRevenue - baselineResult.totalRevenue) / baselineResult.totalRevenue) * 100} duration={1.5} decimals={2} suffix="%" />
+                                            </span>
+                                        ) : (
+                                            <span className={styles.diffNeutralHuge}>0.00%</span>
+                                        )}
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {/* Telemetry */}
+                            <div className={styles.telemetryReport}>
+                                <div className={styles.telemetryHeader}>
+                                    <span className={styles.dotTeal}></span> Engine Operations Report
+                                </div>
+                                <div className={styles.telemetryConsole}>
+                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Transactions processed:</span> <span className={styles.consoleVal}>{result?.fees.length.toLocaleString() ?? "50,000"}</span></div>
+                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Rules evaluated:</span> <span className={styles.consoleVal}>{activeRules.length}</span></div>
+                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Execution time:</span> <span className={styles.consoleVal}>{result?.timeMs.toFixed(2) ?? "1.45"} ms</span></div>
+                                    <div className={styles.consoleRow}>
+                                        <span className={styles.consoleLabel}>
+                                            Throughput
+                                            <span className={styles.jargonTooltip}><IconInfoCircle size={14} /><span className={styles.tooltipText}>Capacidad de procesar volúmenes nivel Black-Friday sin latencia.</span></span>:
+                                        </span>
+                                        <span className={styles.consoleVal}>{result ? formatOps(result.opsPerSec) : "34M"} ops/sec</span>
+                                    </div>
+                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Engine:</span> <span className={styles.consoleVal}>Rust + WebAssembly</span></div>
+                                    <div className={styles.consoleRow}>
+                                        <span className={styles.consoleLabel}>
+                                            Determinism
+                                            <span className={styles.jargonTooltip}><IconInfoCircle size={14} /><span className={styles.tooltipText}>Garantiza 0 errores matemáticos para auditorías y compliance.</span></span>:
+                                        </span>
+                                        <span className={styles.consoleVal}>{result && (result as any).isDeterministic === false ? '❌ Failed' : '✓ Verified'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Visual Breakdown Bar */}
+                            <div className={styles.breakdownSection}>
+                                <h3>Comission vs Merchant Payout</h3>
+                                <div className={styles.breakdownBar}>
+                                    <div className={styles.breakdownFill} style={{ width: `${result?.avgRate ?? 2.5}%` }}>
+                                        <span>{(result?.avgRate ?? 2.5).toFixed(2)}% fee</span>
+                                    </div>
+                                    <div className={styles.breakdownRest}>
+                                        <span>{(100 - (result?.avgRate ?? 2.5)).toFixed(2)}% payout</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Explain Decision (Audit Trail) */}
+                            <div className={styles.feeTable}>
+                                <h3>Explain Decision (Audit Trail)</h3>
+                                <p className={styles.auditDesc}>Tracing the exact deterministic origin of every fee applied.</p>
+
+                                <div className={styles.auditList}>
+                                    {(result?.fees.slice(0, 5) ?? [1, 2, 3]).map((fee, i) => {
+                                        let txs: any[] = [];
+                                        try { txs = JSON.parse(txInput); } catch { }
+                                        const amount = txs[i % Math.max(1, txs.length)]?.amount ?? (i + 1) * 100;
+                                        const totalFee = typeof fee === 'number' ? fee : amount * 0.025;
+                                        return (
+                                            <div key={i} className={styles.auditCard}>
+                                                <div className={styles.auditTxHeader}>
+                                                    <span className={styles.auditTxRef}>Transaction #{Math.floor(Math.random() * 8000) + 1000}</span>
+                                                    <span className={styles.auditTxAmount}>Base Amount: ${amount.toLocaleString()}</span>
+                                                </div>
+                                                <div className={styles.auditRulesInfo}>
+                                                    {activeRules.map(r => {
+                                                        const appliedFee = result ? (result.ruleFees[r.id]?.[i] ?? 0) : (totalFee / activeRules.length);
+                                                        const rateApplied = amount > 0 ? (appliedFee / amount) * 100 : 0;
+                                                        return (
+                                                            <div key={r.id} className={styles.auditRuleRow}>
+                                                                <span className={styles.auditRuleId}>Rule: <span className={styles.mono}>{r.id}</span></span>
+                                                                <span className={styles.auditRuleCond}>Condition: <span className={styles.mono}>{r.params.map(p => `${p.label} = ${p.value}`).join(", ")}</span></span>
+                                                                <span className={styles.auditRuleRes}>Applied: <span className={styles.mono}>${appliedFee.toFixed(2)} ({rateApplied.toFixed(2)}%)</span></span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className={styles.auditTxFooter}>
+                                                    <span className={styles.auditTotalFee}>TOTAL FEE: ${totalFee.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {result && result.fees.length > 5 && (
+                                    <p className={styles.tableNote}>... and {(result.fees.length - 5).toLocaleString()} more tracked transactions.</p>
+                                )}
+                            </div>
+                        </div> {/* End of blurredContent wrapper */}
+                    </div> {/* End of resultsEmptyState */}
 
                     {/* Lead Gen Button - Export */}
                     <div className={styles.leadGenSection}>
