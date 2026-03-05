@@ -426,8 +426,8 @@
 
 .statsRow {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
@@ -468,6 +468,23 @@
     border-radius: 4px;
     font-family: var(--font-geist-sans), sans-serif;
     vertical-align: middle;
+}
+
+.statDelta {
+    background: rgba(99, 102, 241, 0.05);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.diffPositiveHuge {
+    color: #10b981;
+}
+
+.diffNegativeHuge {
+    color: #ef4444;
+}
+
+.diffNeutralHuge {
+    color: #64748b;
 }
 
 .statCard p {
@@ -556,24 +573,24 @@
     vertical-align: middle;
 }
 
-/* TELEMETRY PANEL */
-.telemetryPanel {
-    background: rgba(20, 184, 166, 0.04);
-    border: 1px solid rgba(20, 184, 166, 0.15);
-    border-radius: 12px;
-    padding: 1.25rem 2rem;
+/* TELEMETRY REPORT */
+.telemetryReport {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
     margin-bottom: 2rem;
+    font-family: var(--font-geist-mono), monospace;
 }
 
 .telemetryHeader {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1.25rem;
     display: flex;
     align-items: center;
-    color: #5eead4;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 1rem;
 }
 
 .dotTeal {
@@ -586,139 +603,190 @@
     box-shadow: 0 0 8px rgba(20, 184, 166, 0.6);
 }
 
-.telemetryGrid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-}
-
-.telemetryItem {
+.telemetryConsole {
     display: flex;
     flex-direction: column;
+    gap: 0.6rem;
 }
 
-.telemetryLabel {
-    font-size: 0.7rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.25rem;
+.consoleRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    padding-bottom: 0.4rem;
 }
 
-.telemetryValue {
-    font-family: var(--font-geist-mono), monospace;
-    font-size: 0.95rem;
-    color: #f1f5f9;
+.consoleLabel {
+    color: #64748b;
 }
 
-/* FEE TABLE */
+.consoleVal {
+    color: #10b981;
+    font-weight: 600;
+}
+
+/* AUDIT TRAIL */
 .feeTable {
-    background: rgba(255, 255, 255, 0.015);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 12px;
-    padding: 1.25rem;
-    overflow-x: auto;
     margin-bottom: 2rem;
 }
 
 .feeTable h3 {
-    margin-bottom: 0.75rem;
-    color: #94a3b8;
-    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+    font-size: 1.2rem;
 }
 
-.feeTable table {
-    width: 100%;
-    border-collapse: collapse;
+.auditDesc {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
 }
 
-.feeTable th {
-    text-align: left;
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid #1e293b;
-    color: #475569;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.auditList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-.feeTable td {
-    padding: 0.5rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-    color: #cbd5e1;
+.auditCard {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
     font-family: var(--font-geist-mono), monospace;
+}
+
+.auditTxHeader {
+    display: flex;
+    justify-content: space-between;
     font-size: 0.85rem;
+    color: #94a3b8;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.feeTable tr:hover td {
-    background: rgba(255, 255, 255, 0.015);
+.auditTxAmount {
+    color: #e2e8f0;
 }
 
-.feeHighlight {
-    color: #10b981 !important;
+.auditRulesInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.auditRuleRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.mono {
+    color: #38bdf8;
+}
+
+.auditRuleRes .mono {
+    color: #10b981;
     font-weight: 600;
+}
+
+.auditTxFooter {
+    text-align: right;
+    font-size: 0.9rem;
+    color: #f8fafc;
+    font-weight: 700;
 }
 
 .tableNote {
     text-align: center;
     color: #475569;
     font-size: 0.8rem;
-    margin-top: 0.75rem;
+    margin-top: 1.5rem;
 }
 
-/* SHARE SECTION */
-.shareSection {
+/* LEAD GEN & EXPORT */
+.leadGenSection {
     text-align: center;
-    padding: 1.5rem 0;
+    padding: 3rem 0 1rem;
+    margin-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.shareRow {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
-}
-
-.shareBtnLarge {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #e2e8f0;
-    padding: 0.85rem 2.5rem;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 1rem;
+.downloadBigBtn {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: white;
+    padding: 1.2rem 3rem;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1.2rem;
     cursor: pointer;
-    transition: all 0.2s;
+    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
     font-family: inherit;
+    margin-bottom: 1.5rem;
 }
 
-.exportBtnLarge {
-    background: rgba(16, 185, 129, 0.05);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    color: #10b981;
-    padding: 0.85rem 2.5rem;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-}
-
-.exportBtnLarge:hover {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.4);
-}
-
-.shareBtnLarge:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+.downloadBigBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.5);
 }
 
 .shareNote {
-    color: #475569;
-    font-size: 0.78rem;
-    margin-top: 0.5rem;
+    color: #64748b;
+    font-size: 0.95rem;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+/* WHY TEMPUS */
+.whyTempusSection {
+    max-width: 800px;
+    margin: 4rem auto;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+}
+
+.whyTempusSection h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.whyList {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.whyList li {
+    font-size: 1rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    display: flex;
+    align-items: flex-start;
+}
+
+.whyList li strong {
+    color: #f8fafc;
+    margin-right: 0.4rem;
+}
+
+.whyList .dotTeal {
+    margin-top: 0.45rem;
+    flex-shrink: 0;
 }
 
 /* ADVANCED TOGGLE */

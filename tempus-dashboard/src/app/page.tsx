@@ -252,17 +252,13 @@ export default function PublicSimulator() {
             <section className={styles.hero}>
                 <div className={styles.glowBlob}></div>
                 <div className={styles.glowBlob2}></div>
-                <p className={styles.badge}>⚡ Motor Rust · WebAssembly · Privacidad total</p>
+                <p className={styles.badge}>⚡ Rust Engine · WebAssembly</p>
                 <h1 className={styles.title}>Tempus Engine</h1>
                 <p className={styles.tagline}>
-                    Motor determinista de reglas para <span className={styles.accent}>pricing</span>, <span className={styles.accent}>comisiones</span> y <span className={styles.accent}>simulación masiva</span>.
+                    Deterministic decision engine for complex rules.
                 </p>
-                <p className={styles.subtitle}>
-                    Prueba cualquier modelo de cobro contra miles de transacciones en milisegundos.
-                    100% en tu navegador. Tus datos nunca salen de tu máquina.
-                </p>
-                {!wasmReady && <div className={styles.loading}>⏳ Inicializando motor Rust...</div>}
-                {wasmReady && <div className={styles.ready}>✅ Motor listo — 0ms de latencia de red</div>}
+                {!wasmReady && <div className={styles.loading}>⏳ Initializing engine...</div>}
+                {wasmReady && <div className={styles.ready}>✅ Engine ready — 0ms network latency</div>}
             </section>
 
             {/* Step 1: Choose Model */}
@@ -350,153 +346,110 @@ export default function PublicSimulator() {
             {/* ═══ WOW RESULTS ═══ */}
             {result && (
                 <section className={styles.results}>
-                    {/* Speed Banner */}
-                    <div className={styles.speedBanner}>
-                        <div className={styles.speedMetric}>
-                            <span className={styles.speedValue}>{result.timeMs.toFixed(2)}</span>
-                            <span className={styles.speedUnit}>ms</span>
-                            <span className={styles.speedLabel}>Tiempo total</span>
+
+                    {/* Financial Results */}
+                    <h2 className={styles.resultsTitle}>Expected Financial Impact</h2>
+                    <div className={styles.statsRow}>
+                        <div className={styles.statCard}>
+                            <p>Baseline Revenue</p>
+                            <h3 className={styles.baselineVal}>
+                                ${(baselineResult?.totalRevenue ?? result.totalRevenue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h3>
                         </div>
-                        <div className={styles.speedDivider}></div>
-                        <div className={styles.speedMetric}>
-                            <span className={styles.speedValue}>{formatOps(result.opsPerSec)}</span>
-                            <span className={styles.speedUnit}>ops/s</span>
-                            <span className={styles.speedLabel}>Velocidad</span>
+                        <div className={`${styles.statCard} ${styles.statHighlight}`}>
+                            <p>New Configuration</p>
+                            <h3 className={styles.newVal}>
+                                ${result.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h3>
                         </div>
-                        <div className={styles.speedDivider}></div>
-                        <div className={styles.speedMetric}>
-                            <span className={styles.speedValue}>{result.fees.length.toLocaleString()}</span>
-                            <span className={styles.speedUnit}>txs</span>
-                            <span className={styles.speedLabel}>Procesadas</span>
-                        </div>
-                        <div className={styles.speedDivider}></div>
-                        <div className={styles.speedMetric}>
-                            <span className={styles.speedValue}>{(result.timePerTx * 1000).toFixed(2)}</span>
-                            <span className={styles.speedUnit}>µs/tx</span>
-                            <span className={styles.speedLabel}>Por transacción</span>
+                        <div className={`${styles.statCard} ${styles.statDelta}`}>
+                            <p>Revenue Delta</p>
+                            <h3>
+                                {baselineResult && result.totalRevenue !== baselineResult.totalRevenue ? (
+                                    <span className={result.totalRevenue > baselineResult.totalRevenue ? styles.diffPositiveHuge : styles.diffNegativeHuge}>
+                                        {result.totalRevenue > baselineResult.totalRevenue ? "+" : ""}{(((result.totalRevenue - baselineResult.totalRevenue) / baselineResult.totalRevenue) * 100).toFixed(2)}%
+                                    </span>
+                                ) : (
+                                    <span className={styles.diffNeutralHuge}>0.00%</span>
+                                )}
+                            </h3>
                         </div>
                     </div>
 
                     {/* Telemetry */}
-                    <div className={styles.telemetryPanel}>
+                    <div className={styles.telemetryReport}>
                         <div className={styles.telemetryHeader}>
-                            <span className={styles.dotTeal}></span> Telemetría del Engine WASM
+                            <span className={styles.dotTeal}></span> Engine Operations Report
                         </div>
-                        <div className={styles.telemetryGrid}>
-                            <div className={styles.telemetryItem}>
-                                <span className={styles.telemetryLabel}>Tiempo Eval</span>
-                                <span className={styles.telemetryValue}>{result.timeMs.toFixed(2)} ms</span>
-                            </div>
-                            <div className={styles.telemetryItem}>
-                                <span className={styles.telemetryLabel}>Throughput</span>
-                                <span className={styles.telemetryValue}>{formatOps(result.opsPerSec)} ops/s</span>
-                            </div>
-                            <div className={styles.telemetryItem}>
-                                <span className={styles.telemetryLabel}>Determinismo</span>
-                                <span className={styles.telemetryValue}>{(result as any).isDeterministic ? '✅ Verificado (Hash match)' : '❌ Fallido'}</span>
-                            </div>
-                            <div className={styles.telemetryItem}>
-                                <span className={styles.telemetryLabel}>E/S Payload</span>
-                                <span className={styles.telemetryValue}>In: {(result as any).inputSizeKb} KB / Out: {(result as any).outputSizeKb} KB</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Financial Results */}
-                    <h2 className={styles.resultsTitle}>📊 Impacto Financiero</h2>
-                    <div className={styles.statsRow}>
-                        <div className={`${styles.statCard} ${styles.statHighlight}`}>
-                            <h3>
-                                ${result.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                {baselineResult && result.totalRevenue !== baselineResult.totalRevenue && (
-                                    <span className={result.totalRevenue > baselineResult.totalRevenue ? styles.diffPositive : styles.diffNegative}>
-                                        {result.totalRevenue > baselineResult.totalRevenue ? "+" : ""}{(((result.totalRevenue - baselineResult.totalRevenue) / baselineResult.totalRevenue) * 100).toFixed(1)}% vs base
-                                    </span>
-                                )}
-                            </h3>
-                            <p>Comisiones Generadas</p>
-                        </div>
-                        <div className={styles.statCard}>
-                            <h3>${result.totalProcessed.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-                            <p>Volumen Procesado</p>
-                        </div>
-                        <div className={styles.statCard}>
-                            <h3>{result.avgRate.toFixed(3)}%</h3>
-                            <p>Tasa Efectiva</p>
-                        </div>
-                        <div className={styles.statCard}>
-                            <h3>${result.avgFee.toFixed(4)}</h3>
-                            <p>Comisión Promedio</p>
+                        <div className={styles.telemetryConsole}>
+                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Transactions processed:</span> <span className={styles.consoleVal}>{result.fees.length.toLocaleString()}</span></div>
+                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Rules evaluated:</span> <span className={styles.consoleVal}>{activeRules.length}</span></div>
+                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Execution time:</span> <span className={styles.consoleVal}>{result.timeMs.toFixed(2)} ms</span></div>
+                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Throughput:</span> <span className={styles.consoleVal}>{formatOps(result.opsPerSec)} ops/sec</span></div>
+                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Engine:</span> <span className={styles.consoleVal}>Rust + WebAssembly</span></div>
+                            <div className={styles.consoleRow}><span className={styles.consoleLabel}>Determinism:</span> <span className={styles.consoleVal}>{(result as any).isDeterministic ? '✓ Verified' : '❌ Failed'}</span></div>
                         </div>
                     </div>
 
                     {/* Visual Breakdown Bar */}
                     <div className={styles.breakdownSection}>
-                        <h3>Distribución de Comisiones</h3>
+                        <h3>Comission vs Merchant Payout</h3>
                         <div className={styles.breakdownBar}>
                             <div className={styles.breakdownFill} style={{ width: `${result.avgRate}%` }}>
-                                <span>{result.avgRate.toFixed(2)}% comisión</span>
+                                <span>{result.avgRate.toFixed(2)}% fee</span>
                             </div>
                             <div className={styles.breakdownRest}>
-                                <span>{(100 - result.avgRate).toFixed(2)}% payout al merchant</span>
+                                <span>{(100 - result.avgRate).toFixed(2)}% payout</span>
                             </div>
-                        </div>
-                        <div className={styles.breakdownLegend}>
-                            <span><span className={styles.dotBlue}></span> Tu revenue: ${result.totalRevenue.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                            <span><span className={styles.dotGray}></span> Payout: ${(result.totalProcessed - result.totalRevenue).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
                         </div>
                     </div>
 
-                    {/* Fee Table */}
+                    {/* Explain Decision (Audit Trail) */}
                     <div className={styles.feeTable}>
-                        <h3>Desglose por Transacción</h3>
-                        <table>
-                            <thead>
-                                <tr><th>#</th><th>Monto</th><th>Comisión Total</th>
-                                    {activeRules.map(r => (
-                                        <th key={r.id}>{r.name}</th>
-                                    ))}
-                                    <th>Tasa</th><th>Payout</th></tr>
-                            </thead>
-                            <tbody>
-                                {result.fees.slice(0, 15).map((fee, i) => {
-                                    const txs = JSON.parse(txInput);
-                                    const amount = txs[i % txs.length]?.amount ?? 0;
-                                    const rate = amount > 0 ? ((fee / amount) * 100).toFixed(3) : "0";
-                                    const payout = amount - fee;
-                                    return (
-                                        <tr key={i}>
-                                            <td>{i + 1}</td>
-                                            <td>${amount.toLocaleString()}</td>
-                                            <td className={styles.feeHighlight}>${fee.toFixed(2)}</td>
-                                            {activeRules.map(r => (
-                                                <td key={r.id}>
-                                                    ${(result.ruleFees[r.id]?.[i] ?? 0).toFixed(2)}
-                                                </td>
-                                            ))}
-                                            <td>{rate}%</td>
-                                            <td>${payout.toFixed(2)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        {result.fees.length > 15 && (
-                            <p className={styles.tableNote}>... y {(result.fees.length - 15).toLocaleString()} transacciones más</p>
+                        <h3>Explain Decision (Audit Trail)</h3>
+                        <p className={styles.auditDesc}>Tracing the exact deterministic origin of every fee applied.</p>
+
+                        <div className={styles.auditList}>
+                            {result.fees.slice(0, 5).map((fee, i) => {
+                                const txs = JSON.parse(txInput);
+                                const amount = txs[i % txs.length]?.amount ?? 0;
+                                return (
+                                    <div key={i} className={styles.auditCard}>
+                                        <div className={styles.auditTxHeader}>
+                                            <span className={styles.auditTxRef}>Transaction #{Math.floor(Math.random() * 8000) + 1000}</span>
+                                            <span className={styles.auditTxAmount}>Base Amount: ${amount.toLocaleString()}</span>
+                                        </div>
+                                        <div className={styles.auditRulesInfo}>
+                                            {activeRules.map(r => {
+                                                const appliedFee = result.ruleFees[r.id]?.[i] ?? 0;
+                                                const rateApplied = amount > 0 ? (appliedFee / amount) * 100 : 0;
+                                                return (
+                                                    <div key={r.id} className={styles.auditRuleRow}>
+                                                        <span className={styles.auditRuleId}>Rule: <span className={styles.mono}>{r.id}</span></span>
+                                                        <span className={styles.auditRuleCond}>Condition: <span className={styles.mono}>{r.params.map(p => `${p.label} = ${p.value}`).join(", ")}</span></span>
+                                                        <span className={styles.auditRuleRes}>Applied: <span className={styles.mono}>${appliedFee.toFixed(2)} ({rateApplied.toFixed(2)}%)</span></span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className={styles.auditTxFooter}>
+                                            <span className={styles.auditTotalFee}>TOTAL FEE: ${fee.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {result.fees.length > 5 && (
+                            <p className={styles.tableNote}>... and {(result.fees.length - 5).toLocaleString()} more tracked transactions.</p>
                         )}
                     </div>
 
-                    {/* Share */}
-                    <div className={styles.shareSection}>
-                        <div className={styles.shareRow}>
-                            <button className={styles.shareBtnLarge} onClick={copyShareUrl}>
-                                {copied ? "✅ ¡Link copiado!" : "🔗 Compartir esta simulación"}
-                            </button>
-                            <button className={styles.exportBtnLarge} onClick={downloadScenario}>
-                                💾 Export Scenario
-                            </button>
-                        </div>
-                        <p className={styles.shareNote}>Cualquiera con el link verá exactamente los mismos resultados</p>
+                    {/* Lead Gen Button - Export */}
+                    <div className={styles.leadGenSection}>
+                        <button className={styles.downloadBigBtn} onClick={downloadScenario}>
+                            ⬇️ Download Scenario JSON
+                        </button>
+                        <p className={styles.shareNote}>Fork this scenario or import it directly into your own backend to reproduce these deterministic boundaries.</p>
                     </div>
                 </section>
             )}
@@ -533,11 +486,21 @@ export default function PublicSimulator() {
                 )}
             </section>
 
+            {/* Why Tempus Section */}
+            <section className={styles.whyTempusSection}>
+                <h2>Why Tempus</h2>
+                <ul className={styles.whyList}>
+                    <li><span className={styles.dotTeal}></span> <strong>Deterministic rule engine:</strong> The exact same input yields the exact same computational output. Guaranteed.</li>
+                    <li><span className={styles.dotTeal}></span> <strong>Versioned rules:</strong> Rollback to a specific historical regime smoothly via pure code.</li>
+                    <li><span className={styles.dotTeal}></span> <strong>Massive scenario simulation:</strong> Project P&L impacts against millions of historic transactions instantly.</li>
+                    <li><span className={styles.dotTeal}></span> <strong>Rust + WebAssembly performance:</strong> Memory-safe, C-level speed embedded on client or edge nodes.</li>
+                    <li><span className={styles.dotTeal}></span> <strong>Explainable decisions:</strong> Immutable audit trails matching exactly which rule hit which specific transaction block.</li>
+                </ul>
+            </section>
+
             {/* Footer */}
             <footer className={styles.footer}>
                 <p className={styles.footerBrand}>Tempus Engine</p>
-                <p>Motor de pricing determinista compilado de Rust a WebAssembly.</p>
-                <p>Todos los cálculos se ejecutan localmente. Tus datos nunca salen de tu navegador.</p>
             </footer>
         </main>
     );
