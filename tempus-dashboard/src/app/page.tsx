@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import CountUp from "react-countup";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { initWasm, getWasm } from "../lib/wasm";
 import { TEMPLATES, PricingTemplate, PricingRule, RuleParam, rebuildRule } from "../data/templates";
+import { dict, Language } from "../lib/i18n";
 import styles from "./simulator.module.css";
 
 interface SimResult {
@@ -21,54 +22,40 @@ interface SimResult {
     baselineRevenue?: number;
 }
 
+const TIERS = [
+    { key: 'financial' as const, ids: ['marketplace-3tier', 'saas-subscription', 'delivery-fee-engine', 'customs-import-duty'] },
+    { key: 'technical' as const, ids: ['ai-guardrails', 'api-rate-limit'] },
+];
+
 export default function PublicSimulator() {
     const [wasmReady, setWasmReady] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<PricingTemplate>(TEMPLATES[0]);
     const [activeRules, setActiveRules] = useState<PricingRule[]>(TEMPLATES[0].rules);
     const [rulesJson, setRulesJson] = useState(JSON.stringify(TEMPLATES[0].rules, null, 2));
-    const [txInput, setTxInput] = useState(JSON.stringify(TEMPLATES[0].sampleTransactions, null, 2));
+    const [txInput, setTxInput] = useState(JSON.stringify(TEMPLATES[0].dataset.data, null, 2));
     const [result, setResult] = useState<SimResult | null>(null);
     const [baselineResult, setBaselineResult] = useState<SimResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [txCount, setTxCount] = useState(10000);
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [lang, setLang] = useState<Language>('en');
+    const [auditExpanded, setAuditExpanded] = useState(false);
 
-    useEffect(() => {
-        initWasm().then(() => setWasmReady(true)).catch(console.error);
-    }, []);
+    const resultsRef = useRef<HTMLElement>(null);
+    const t = dict[lang];
+    const activeProfile = selectedTemplate.presentation_profile[lang];
+    const isCurrency = activeProfile.units === 'currency';
+
+    useEffect(() => { initWasm().then(() => setWasmReady(true)).catch(console.error); }, []);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
         const params = new URLSearchParams(window.location.search);
-        const rulesParam = params.get("rules");
-        const txParam = params.get("tx");
         const tplParam = params.get("tpl");
-
         if (tplParam) {
             const tpl = TEMPLATES.find(t => t.id === tplParam);
-            if (tpl) {
-                setSelectedTemplate(tpl);
-                setActiveRules(tpl.rules);
-                setRulesJson(JSON.stringify(tpl.rules, null, 2));
-                setTxInput(JSON.stringify(tpl.sampleTransactions, null, 2));
-            }
-        }
-
-        if (rulesParam) {
-            try {
-                const decoded = JSON.parse(decodeURIComponent(escape(atob(rulesParam))));
-                setActiveRules(decoded);
-                setRulesJson(JSON.stringify(decoded, null, 2));
-                setShowAdvanced(true);
-            } catch { /* ignore */ }
-        }
-        if (txParam) {
-            try {
-                setTxInput(decodeURIComponent(escape(atob(txParam))));
-                setShowAdvanced(true);
-            } catch { /* ignore */ }
+            if (tpl) { setSelectedTemplate(tpl); setActiveRules(tpl.rules); setRulesJson(JSON.stringify(tpl.rules, null, 2)); setTxInput(JSON.stringify(tpl.dataset.data, null, 2)); }
         }
     }, []);
 
@@ -76,10 +63,11 @@ export default function PublicSimulator() {
         setSelectedTemplate(template);
         setActiveRules(template.rules);
         setRulesJson(JSON.stringify(template.rules, null, 2));
-        setTxInput(JSON.stringify(template.sampleTransactions, null, 2));
+        setTxInput(JSON.stringify(template.dataset.data, null, 2));
         setResult(null);
         setBaselineResult(null);
         setError(null);
+        setAuditExpanded(false);
     };
 
     const updateRuleParam = (ruleId: string, paramKey: string, newValue: number) => {
@@ -87,12 +75,7 @@ export default function PublicSimulator() {
             const updated = prev.map(rule => {
                 if (rule.id !== ruleId) return rule;
                 const updatedParams = rule.params.map(p => p.key === paramKey ? { ...p, value: newValue } : p);
-                const newRuleObj = rebuildRule(rule.id, updatedParams);
-                return {
-                    ...rule,
-                    params: updatedParams,
-                    rule: newRuleObj
-                };
+                return { ...rule, params: updatedParams, rule: rebuildRule(rule.id, updatedParams) };
             });
             setRulesJson(JSON.stringify(updated, null, 2));
             return updated;
@@ -103,17 +86,13 @@ export default function PublicSimulator() {
         if (!wasmReady) return;
         setError(null);
         setIsRunning(true);
+        setAuditExpanded(false);
 
-        // Small delay for visual effect
         setTimeout(() => {
             try {
                 const wasm = getWasm();
                 let transactions: { amount: number }[];
-                try { transactions = JSON.parse(txInput); } catch {
-                    setError("Error en los datos de transacciones");
-                    setIsRunning(false);
-                    return;
-                }
+                try { transactions = JSON.parse(txInput); } catch { setError("Invalid data"); setIsRunning(false); return; }
 
                 let expandedTx = transactions;
                 if (txCount > transactions.length) {
@@ -123,74 +102,45 @@ export default function PublicSimulator() {
                     expandedTx = expandedTx.slice(0, txCount);
                 }
 
-                let rulesToEvaluate = activeRules;
-                try {
-                    const manualRules = JSON.parse(rulesJson);
-                    if (Array.isArray(manualRules)) rulesToEvaluate = manualRules;
-                } catch {
-                    // Fallback to activeRules if manual json is invalid
-                }
+                let rulesToEval = activeRules;
+                try { const m = JSON.parse(rulesJson); if (Array.isArray(m)) rulesToEval = m; } catch { }
 
                 const start = performance.now();
-
                 const expandedTxStr = JSON.stringify(expandedTx);
-                const rulesJsonStr = JSON.stringify(rulesToEvaluate.map(r => r.rule));
-
-                // 1. First run for main results
+                const rulesJsonStr = JSON.stringify(rulesToEval.map(r => r.rule));
                 const resultJson = wasm.evaluate_batch_multi_wasm(rulesJsonStr, expandedTxStr);
-
-                // 2. Second run for Determinism Verification
                 const resultJson2 = wasm.evaluate_batch_multi_wasm(rulesJsonStr, expandedTxStr);
                 const isDeterministic = resultJson === resultJson2;
-
                 const rawResults: { total_fee: number, rule_fees: number[] }[] = JSON.parse(resultJson);
-
                 const elapsed = performance.now() - start;
 
-                let ruleFees: { [ruleId: string]: number[] } = {};
-                let ruleRevenue: { [ruleId: string]: number } = {};
-                rulesToEvaluate.forEach(r => {
-                    ruleFees[r.id] = new Array(expandedTx.length).fill(0);
-                    ruleRevenue[r.id] = 0;
-                });
+                const ruleFees: { [ruleId: string]: number[] } = {};
+                const ruleRevenue: { [ruleId: string]: number } = {};
+                rulesToEval.forEach(r => { ruleFees[r.id] = new Array(expandedTx.length).fill(0); ruleRevenue[r.id] = 0; });
 
-                let allFees: number[] = new Array(expandedTx.length).fill(0);
+                const allFees: number[] = new Array(expandedTx.length).fill(0);
                 let totalRevenue = 0;
 
                 for (let i = 0; i < rawResults.length; i++) {
-                    const res = rawResults[i];
-                    allFees[i] = res.total_fee;
-                    totalRevenue += res.total_fee;
-
-                    for (let j = 0; j < rulesToEvaluate.length; j++) {
-                        const ruleId = rulesToEvaluate[j].id;
-                        const fee = res.rule_fees[j];
-                        ruleFees[ruleId][i] = fee;
-                        ruleRevenue[ruleId] += fee;
+                    allFees[i] = rawResults[i].total_fee;
+                    totalRevenue += rawResults[i].total_fee;
+                    for (let j = 0; j < rulesToEval.length; j++) {
+                        const ruleId = rulesToEval[j].id;
+                        ruleFees[ruleId][i] = rawResults[i].rule_fees[j];
+                        ruleRevenue[ruleId] += rawResults[i].rule_fees[j];
                     }
                 }
 
-                const totalProcessed = expandedTx.reduce((a, b) => a + b.amount, 0);
-                const avgFee = totalRevenue / allFees.length;
+                const isCurr = activeProfile.units === 'currency';
+                const totalProcessed = isCurr ? expandedTx.reduce((a, b) => a + (b.amount || 0), 0) : expandedTx.length;
                 const avgRate = totalProcessed > 0 ? (totalRevenue / totalProcessed) * 100 : 0;
-                const totalOps = allFees.length * rulesToEvaluate.length * 2; // * 2 because we evaluate twice for determinism check
-                const opsPerSec = elapsed > 0 ? Math.round((allFees.length * rulesToEvaluate.length) / (elapsed / 2 / 1000)) : 0;
-                const timePerTx = (elapsed / 2) / allFees.length;
+                const opsPerSec = elapsed > 0 ? Math.round((allFees.length * rulesToEval.length) / (elapsed / 2 / 1000)) : 0;
 
                 const newResult = {
-                    fees: allFees,
-                    ruleFees,
-                    totalRevenue,
-                    ruleRevenue,
-                    totalProcessed,
-                    avgFee,
-                    avgRate,
-                    timeMs: elapsed / 2,
-                    opsPerSec,
-                    timePerTx,
-                    isDeterministic,
-                    inputSizeKb: Math.round(new Blob([expandedTxStr]).size / 1024),
-                    outputSizeKb: Math.round(new Blob([resultJson]).size / 1024)
+                    fees: allFees, ruleFees, totalRevenue, ruleRevenue, totalProcessed,
+                    avgFee: totalRevenue / allFees.length, avgRate,
+                    timeMs: elapsed / 2, opsPerSec, timePerTx: (elapsed / 2) / allFees.length,
+                    isDeterministic
                 };
 
                 setResult(prev => {
@@ -198,342 +148,242 @@ export default function PublicSimulator() {
                     return newResult as unknown as SimResult;
                 });
                 setIsRunning(false);
-            } catch (e: any) {
-                setError(e.message || String(e));
-                setIsRunning(false);
-            }
-        }, 150);
-    }, [wasmReady, activeRules, rulesJson, txInput, txCount, baselineResult]);
-
-    const copyShareUrl = () => {
-        const base = window.location.origin + window.location.pathname;
-        const templateSlug = selectedTemplate.id;
-        const url = `${base}?rules=${encodeURIComponent(btoa(unescape(encodeURIComponent(rulesJson))))}&tx=${encodeURIComponent(btoa(unescape(encodeURIComponent(txInput))))}&vol=${txCount}&tpl=${templateSlug}`;
-        navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
+                setTimeout(() => { resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
+            } catch (e: any) { setError(e.message || String(e)); setIsRunning(false); }
+        }, 100);
+    }, [wasmReady, activeRules, rulesJson, txInput, txCount, baselineResult, activeProfile]);
 
     const downloadScenario = () => {
-        const scenario = {
-            metadata: {
-                template: selectedTemplate.id,
-                name: selectedTemplate.name,
-                exported_at: new Date().toISOString()
-            },
-            rules: activeRules,
-            transactions: JSON.parse(txInput)
-        };
-        const blob = new Blob([JSON.stringify(scenario, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ template: selectedTemplate.id, rules: activeRules, transactions: JSON.parse(txInput) }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tempus-scenario-${selectedTemplate.id}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = url; a.download = `tempus-${selectedTemplate.id}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     };
 
-    const formatOps = (ops: number) => {
-        if (ops >= 1_000_000) return `${(ops / 1_000_000).toFixed(1)}M`;
-        if (ops >= 1_000) return `${(ops / 1_000).toFixed(0)}K`;
-        return ops.toString();
-    };
+    const fmtOps = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}K` : `${n}`;
+    const txLabels: Record<number, string> = { 100: "100", 1000: "1K", 10000: "10K", 50000: "50K" };
 
-    const txLabels: Record<number, string> = {
-        100: "100",
-        1000: "1K",
-        10000: "10K",
-        50000: "50K",
-    };
+    const auditEventsToShow = auditExpanded ? 5 : 1;
 
     return (
-        <main className={styles.container}>
-            {/* Hero */}
-            <section className={styles.hero}>
-                <div className={styles.glowBlob}></div>
-                <div className={styles.glowBlob2}></div>
-                <p className={styles.badge}>⚡ Rust Engine · WebAssembly</p>
-                <h1 className={styles.title}>Tempus Engine</h1>
-                <p className={styles.tagline}>
-                    Deterministic decision engine for complex rules.
-                </p>
-                {!wasmReady && <div className={styles.loading}>⏳ Initializing engine...</div>}
-                {wasmReady && <div className={styles.ready}>✅ Engine ready — 0ms network latency</div>}
-            </section>
-
-            {/* Step 1: Choose Model */}
-            <section className={styles.section}>
-                <h2 className={styles.stepTitle}><span className={styles.stepNum}>1</span> Elige un modelo de cobro</h2>
-                <div className={styles.templateGrid}>
-                    {TEMPLATES.map((t) => (
-                        <button
-                            key={t.id}
-                            className={`${styles.templateCard} ${selectedTemplate.id === t.id ? styles.active : ""}`}
-                            onClick={() => selectTemplate(t)}
-                        >
-                            <span className={styles.templateIcon}>{t.icon}</span>
-                            <strong>{t.name}</strong>
-                            <p>{t.description}</p>
-                        </button>
-                    ))}
+        <main className={styles.app}>
+            {/* ─── NAV ─── */}
+            <nav className={styles.nav}>
+                <div className={styles.navLeft}>
+                    <span className={styles.brand}>{t.brand}</span>
+                    <span className={styles.navDot}>·</span>
+                    <span className={styles.navTag}>{t.tagline}</span>
                 </div>
-            </section>
+                <div className={styles.navRight}>
+                    <span className={styles.engineBadge}>{wasmReady ? t.engineNote : "⏳"}</span>
+                    <div className={styles.langSwitch}>
+                        <button className={lang === 'en' ? styles.langOn : styles.langOff} onClick={() => setLang('en')}>EN</button>
+                        <button className={lang === 'es' ? styles.langOn : styles.langOff} onClick={() => setLang('es')}>ES</button>
+                    </div>
+                </div>
+            </nav>
 
-            {/* Step 2: Configure Pricing Model */}
-            <section className={styles.section}>
-                <h2 className={styles.stepTitle}><span className={styles.stepNum}>2</span> Configura los parámetros</h2>
-                <div className={styles.paramEditor}>
-                    {activeRules.map(rule => (
-                        <div key={rule.id} className={styles.ruleEditorCard}>
-                            <h4>{rule.name}</h4>
-                            <p className={styles.ruleDesc}>{rule.description}</p>
-                            <div className={styles.paramList}>
+            {/* ─── WORKSPACE ─── */}
+            <div className={styles.workspace}>
+
+                {/* LEFT PANEL */}
+                <aside className={styles.panel}>
+                    <div className={styles.panelSection}>
+                        <h3 className={styles.panelTitle}>{t.steps.scenario}</h3>
+                        {TIERS.map(tier => {
+                            const templates = TEMPLATES.filter(tpl => tier.ids.includes(tpl.id));
+                            if (!templates.length) return null;
+                            return (
+                                <div key={tier.key} className={styles.tierBlock}>
+                                    <span className={`${styles.tierTag} ${styles[`t_${tier.key}`]}`}>{t.tiers[tier.key]}</span>
+                                    {templates.map(tpl => (
+                                        <button key={tpl.id} className={`${styles.scenarioBtn} ${selectedTemplate.id === tpl.id ? styles.scenarioActive : ''}`} onClick={() => selectTemplate(tpl)}>
+                                            <span className={styles.scenarioIcon}>{tpl.icon}</span>
+                                            <div className={styles.scenarioText}>
+                                                <span className={styles.scenarioName}>{tpl.name}</span>
+                                                <span className={styles.scenarioDesc}>{tpl.description}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className={styles.divider} />
+
+                    <div className={styles.panelSection}>
+                        <h3 className={styles.panelTitle}>{t.steps.params}</h3>
+                        {activeRules.map(rule => (
+                            <div key={rule.id} className={styles.ruleBlock}>
+                                <span className={styles.ruleName}>{rule.name}</span>
                                 {rule.params.map(param => (
-                                    <div key={param.key} className={styles.paramRow}>
-                                        <div className={styles.paramHeader}>
-                                            <span className={styles.paramLabel}>{param.label}</span>
-                                            <span className={styles.paramValue}>{param.value}{param.suffix}</span>
+                                    <div key={param.key} className={styles.sliderRow}>
+                                        <div className={styles.sliderHeader}>
+                                            <span className={styles.sliderLabel}>{param.label}</span>
+                                            <span className={styles.sliderVal}>{param.value}{param.suffix}</span>
                                         </div>
-                                        <input
-                                            type="range"
-                                            className={styles.paramSlider}
-                                            min={param.min}
-                                            max={param.max}
-                                            step={param.step}
-                                            value={param.value}
-                                            onChange={(e) => updateRuleParam(rule.id, param.key, parseFloat(e.target.value))}
-                                        />
+                                        <input type="range" className={styles.slider} min={param.min} max={param.max} step={param.step} value={param.value} onChange={e => updateRuleParam(rule.id, param.key, parseFloat(e.target.value))} />
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Step 3: Volume */}
-            <section className={styles.section}>
-                <h2 className={styles.stepTitle}><span className={styles.stepNum}>3</span> Volumen de transacciones</h2>
-                <div className={styles.volumeSelector}>
-                    {Object.entries(txLabels).map(([val, label]) => (
-                        <button
-                            key={val}
-                            className={`${styles.volumeBtn} ${txCount === Number(val) ? styles.volumeActive : ""}`}
-                            onClick={() => setTxCount(Number(val))}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            </section>
-
-            {/* Step 4: Run */}
-            <section className={styles.section} style={{ textAlign: "center" }}>
-                <h2 className={styles.stepTitle}><span className={styles.stepNum}>4</span> Ejecuta el motor</h2>
-                <div className={styles.actionRow}>
-                    <button
-                        className={`${styles.runBtn} ${isRunning ? styles.runBtnActive : ""}`}
-                        onClick={runSimulation}
-                        disabled={!wasmReady || isRunning}
-                    >
-                        {isRunning ? `⚡ Evaluando ${(txCount * activeRules.length).toLocaleString()} operaciones...` : "⚡ Ejecutar Motor"}
-                    </button>
-                </div>
-            </section>
-
-            {error && <div className={styles.errorBox}>❌ {error}</div>}
-
-            {/* ═══ WOW RESULTS ═══ */}
-            {result && (
-                <section className={styles.results}>
-
-                    {/* Financial Results */}
-                    <h2 className={styles.resultsTitle}>Expected Financial Impact</h2>
-
-                    <div className={styles.resultsEmptyState}>
-                        {!result && !baselineResult && (
-                            <div className={styles.emptyOverlay}>
-                                <div className={styles.emptyOverlayCard}>
-                                    <span style={{ fontSize: "2rem" }}>⚡</span>
-                                    <div className={styles.emptyTitle}>Engine Ready</div>
-                                    <div className={styles.emptySubtitle}>Run the engine to calculate massive financial impact with zero latency.</div>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className={(!result && !baselineResult) ? styles.blurredContent : ""}>
-                            <div className={styles.statsRow}>
-                                <div className={styles.statCard}>
-                                    <p>Baseline Revenue</p>
-                                    <h3 className={styles.baselineVal}>
-                                        $<CountUp start={0} end={baselineResult?.totalRevenue ?? result?.totalRevenue ?? 1250000} duration={1.5} decimals={2} separator="," />
-                                    </h3>
-                                </div>
-                                <div className={`${styles.statCard} ${styles.statHighlight}`}>
-                                    <p>New Configuration</p>
-                                    <h3 className={styles.newVal}>
-                                        $<CountUp start={0} end={result?.totalRevenue ?? 1320000} duration={1.5} decimals={2} separator="," />
-                                    </h3>
-                                </div>
-                                <div className={`${styles.statCard} ${styles.statDelta}`}>
-                                    <p>Revenue Delta</p>
-                                    <h3>
-                                        {baselineResult && result && result.totalRevenue !== baselineResult.totalRevenue ? (
-                                            <span className={result.totalRevenue > baselineResult.totalRevenue ? styles.diffPositiveHuge : styles.diffNegativeHuge}>
-                                                {result.totalRevenue > baselineResult.totalRevenue ? "+" : ""}
-                                                <CountUp start={0} end={((result.totalRevenue - baselineResult.totalRevenue) / baselineResult.totalRevenue) * 100} duration={1.5} decimals={2} suffix="%" />
-                                            </span>
-                                        ) : (
-                                            <span className={styles.diffNeutralHuge}>0.00%</span>
-                                        )}
-                                    </h3>
-                                </div>
-                            </div>
-
-                            {/* Telemetry */}
-                            <div className={styles.telemetryReport}>
-                                <div className={styles.telemetryHeader}>
-                                    <span className={styles.dotTeal}></span> Engine Operations Report
-                                </div>
-                                <div className={styles.telemetryConsole}>
-                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Transactions processed:</span> <span className={styles.consoleVal}>{result?.fees.length.toLocaleString() ?? "50,000"}</span></div>
-                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Rules evaluated:</span> <span className={styles.consoleVal}>{activeRules.length}</span></div>
-                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Execution time:</span> <span className={styles.consoleVal}>{result?.timeMs.toFixed(2) ?? "1.45"} ms</span></div>
-                                    <div className={styles.consoleRow}>
-                                        <span className={styles.consoleLabel}>
-                                            Throughput
-                                            <span className={styles.jargonTooltip}><IconInfoCircle size={14} /><span className={styles.tooltipText}>Capacidad de procesar volúmenes nivel Black-Friday sin latencia.</span></span>:
-                                        </span>
-                                        <span className={styles.consoleVal}>{result ? formatOps(result.opsPerSec) : "34M"} ops/sec</span>
-                                    </div>
-                                    <div className={styles.consoleRow}><span className={styles.consoleLabel}>Engine:</span> <span className={styles.consoleVal}>Rust + WebAssembly</span></div>
-                                    <div className={styles.consoleRow}>
-                                        <span className={styles.consoleLabel}>
-                                            Determinism
-                                            <span className={styles.jargonTooltip}><IconInfoCircle size={14} /><span className={styles.tooltipText}>Garantiza 0 errores matemáticos para auditorías y compliance.</span></span>:
-                                        </span>
-                                        <span className={styles.consoleVal}>{result && (result as any).isDeterministic === false ? '❌ Failed' : '✓ Verified'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Visual Breakdown Bar */}
-                            <div className={styles.breakdownSection}>
-                                <h3>Comission vs Merchant Payout</h3>
-                                <div className={styles.breakdownBar}>
-                                    <div className={styles.breakdownFill} style={{ width: `${result?.avgRate ?? 2.5}%` }}>
-                                        <span>{(result?.avgRate ?? 2.5).toFixed(2)}% fee</span>
-                                    </div>
-                                    <div className={styles.breakdownRest}>
-                                        <span>{(100 - (result?.avgRate ?? 2.5)).toFixed(2)}% payout</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Explain Decision (Audit Trail) */}
-                            <div className={styles.feeTable}>
-                                <h3>Explain Decision (Audit Trail)</h3>
-                                <p className={styles.auditDesc}>Tracing the exact deterministic origin of every fee applied.</p>
-
-                                <div className={styles.auditList}>
-                                    {(result?.fees.slice(0, 5) ?? [1, 2, 3]).map((fee, i) => {
-                                        let txs: any[] = [];
-                                        try { txs = JSON.parse(txInput); } catch { }
-                                        const amount = txs[i % Math.max(1, txs.length)]?.amount ?? (i + 1) * 100;
-                                        const totalFee = typeof fee === 'number' ? fee : amount * 0.025;
-                                        return (
-                                            <div key={i} className={styles.auditCard}>
-                                                <div className={styles.auditTxHeader}>
-                                                    <span className={styles.auditTxRef}>Transaction #{Math.floor(Math.random() * 8000) + 1000}</span>
-                                                    <span className={styles.auditTxAmount}>Base Amount: ${amount.toLocaleString()}</span>
-                                                </div>
-                                                <div className={styles.auditRulesInfo}>
-                                                    {activeRules.map(r => {
-                                                        const appliedFee = result ? (result.ruleFees[r.id]?.[i] ?? 0) : (totalFee / activeRules.length);
-                                                        const rateApplied = amount > 0 ? (appliedFee / amount) * 100 : 0;
-                                                        return (
-                                                            <div key={r.id} className={styles.auditRuleRow}>
-                                                                <span className={styles.auditRuleId}>Rule: <span className={styles.mono}>{r.id}</span></span>
-                                                                <span className={styles.auditRuleCond}>Condition: <span className={styles.mono}>{r.params.map(p => `${p.label} = ${p.value}`).join(", ")}</span></span>
-                                                                <span className={styles.auditRuleRes}>Applied: <span className={styles.mono}>${appliedFee.toFixed(2)} ({rateApplied.toFixed(2)}%)</span></span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                <div className={styles.auditTxFooter}>
-                                                    <span className={styles.auditTotalFee}>TOTAL FEE: ${totalFee.toFixed(2)}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                {result && result.fees.length > 5 && (
-                                    <p className={styles.tableNote}>... and {(result.fees.length - 5).toLocaleString()} more tracked transactions.</p>
-                                )}
-                            </div>
-                        </div> {/* End of blurredContent wrapper */}
-                    </div> {/* End of resultsEmptyState */}
-
-                    {/* Lead Gen Button - Export */}
-                    <div className={styles.leadGenSection}>
-                        <button className={styles.downloadBigBtn} onClick={downloadScenario}>
-                            ⬇️ Download Scenario JSON
-                        </button>
-                        <p className={styles.shareNote}>Fork this scenario or import it directly into your own backend to reproduce these deterministic boundaries.</p>
+                        ))}
                     </div>
-                </section>
-            )}
 
-            {/* Advanced Toggle */}
-            <section className={styles.section}>
-                <button
-                    className={styles.advancedToggle}
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                >
-                    {showAdvanced ? "▼" : "▶"} Modo Avanzado — Editar reglas y datos manualmente
-                </button>
+                    <div className={styles.divider} />
+
+                    <div className={styles.panelSection}>
+                        <h3 className={styles.panelTitle}>{t.volume}</h3>
+                        <div className={styles.volRow}>
+                            {Object.entries(txLabels).map(([v, label]) => (
+                                <button key={v} className={`${styles.volBtn} ${txCount === Number(v) ? styles.volActive : ''}`} onClick={() => setTxCount(Number(v))}>{label}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button className={`${styles.runBtn} ${isRunning ? styles.runBtnPulse : ''}`} onClick={runSimulation} disabled={!wasmReady || isRunning}>
+                        {isRunning ? t.runBtnRunning : t.runBtn}
+                    </button>
+                </aside>
+
+                {/* MAIN CANVAS */}
+                <section className={styles.canvas} ref={resultsRef}>
+                    {!result ? (
+                        /* ─── EMPTY STATE ─── */
+                        <div className={styles.emptyState}>
+                            <p className={styles.emptyHeadline}>{t.empty.headline}</p>
+                            <p className={styles.emptySub}>{t.empty.sub}</p>
+                            <div className={styles.skeletonGrid}>
+                                <div className={styles.skeletonCard}>
+                                    <span className={styles.skeletonLabel}>{t.empty.stat1label}</span>
+                                    <span className={styles.skeletonVal}>{t.empty.stat1val}</span>
+                                </div>
+                                <div className={styles.skeletonCard}>
+                                    <span className={styles.skeletonLabel}>{t.empty.stat2label}</span>
+                                    <span className={styles.skeletonVal}>{t.empty.stat2val}</span>
+                                </div>
+                                <div className={styles.skeletonCard}>
+                                    <span className={styles.skeletonLabel}>{t.empty.stat3label}</span>
+                                    <span className={styles.skeletonVal}>{t.empty.stat3val}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* ─── RESULTS ─── */
+                        <div className={styles.resultFlow}>
+                            {/* Action bar at top */}
+                            <div className={styles.resultHeader}>
+                                <h2 className={styles.resultTitle}>{activeProfile.title}</h2>
+                                <div className={styles.headerActions}>
+                                    <button className={styles.btnPrimary}>{t.deploy.btn}</button>
+                                    <button className={styles.btnSecondary} onClick={downloadScenario}>{t.export.btn}</button>
+                                </div>
+                            </div>
+
+                            {/* Stats */}
+                            <div className={styles.statsGrid}>
+                                <div className={styles.stat}>
+                                    <span className={styles.statLabel}>{t.results.baseline}</span>
+                                    <span className={styles.statNum}>{isCurrency ? "$" : ""}<CountUp end={baselineResult?.totalRevenue ?? result.totalRevenue} duration={1} decimals={isCurrency ? 2 : 0} separator="," /></span>
+                                </div>
+                                <div className={`${styles.stat} ${styles.statHL}`}>
+                                    <span className={styles.statLabel}>{t.results.projected}</span>
+                                    <span className={styles.statNum}>{isCurrency ? "$" : ""}<CountUp end={result.totalRevenue} duration={1} decimals={isCurrency ? 2 : 0} separator="," /></span>
+                                </div>
+                                <div className={styles.stat}>
+                                    <span className={styles.statLabel}>{t.results.delta}</span>
+                                    <span className={`${styles.statNum} ${baselineResult && result.totalRevenue !== baselineResult.totalRevenue ? (result.totalRevenue > baselineResult.totalRevenue ? styles.green : styles.red) : styles.dim}`}>
+                                        {baselineResult && result.totalRevenue !== baselineResult.totalRevenue
+                                            ? <CountUp end={((result.totalRevenue - baselineResult.totalRevenue) / Math.max(1, baselineResult.totalRevenue)) * 100} duration={1} decimals={2} prefix={result.totalRevenue > baselineResult.totalRevenue ? "+" : ""} suffix="%" />
+                                            : "0.00%"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Breakdown Bar with labels */}
+                            <div className={styles.barWrap}>
+                                <div className={styles.barLabels}>
+                                    <span>{activeProfile.chartLabels.highlight}</span>
+                                    <span>{activeProfile.chartLabels.base}</span>
+                                </div>
+                                <div className={styles.bar}>
+                                    <div className={styles.barFill} style={{ width: `${Math.max(result.avgRate, 1)}%` }}>
+                                        {result.avgRate.toFixed(1)}%
+                                    </div>
+                                    <div className={styles.barRest}>
+                                        {(100 - result.avgRate).toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Engine Report */}
+                            <div className={styles.report}>
+                                <div className={styles.reportHeader}><span className={styles.dot} /> {t.telemetry.header}</div>
+                                <div className={styles.reportGrid}>
+                                    <div className={styles.rRow}><span>{t.telemetry.txProcessed}</span><span className={styles.rVal}>{result.fees.length.toLocaleString()}</span></div>
+                                    <div className={styles.rRow}><span>{t.telemetry.rulesEvaluated}</span><span className={styles.rVal}>{activeRules.length}</span></div>
+                                    <div className={styles.rRow}><span>{t.telemetry.execTime}</span><span className={styles.rVal}>{result.timeMs.toFixed(2)} ms</span></div>
+                                    <div className={styles.rRow}>
+                                        <span className={styles.tipWrap}>{t.telemetry.throughput} <span className={styles.tip}><IconInfoCircle size={12} /><span className={styles.tipText}>{t.telemetry.throughputTip}</span></span></span>
+                                        <span className={styles.rVal}>{fmtOps(result.opsPerSec)} ops/s</span>
+                                    </div>
+                                    <div className={styles.rRow}><span>{t.telemetry.engine}</span><span className={styles.rVal}>{t.telemetry.engineVal}</span></div>
+                                    <div className={styles.rRow}>
+                                        <span className={styles.tipWrap}>{t.telemetry.determinism} <span className={styles.tip}><IconInfoCircle size={12} /><span className={styles.tipText}>{t.telemetry.determinismTip}</span></span></span>
+                                        <span className={styles.rVal}>{(result as any).isDeterministic === false ? t.telemetry.failed : t.telemetry.verified}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Audit Trail — collapsible */}
+                            <div className={styles.auditSection}>
+                                <h3>{t.audit.title}</h3>
+                                <p className={styles.auditDesc}>{t.audit.desc.replace('{action}', activeProfile.auditActionLabel.toLowerCase())}</p>
+                                {result.fees.slice(0, auditEventsToShow).map((fee, i) => {
+                                    let txs: any[] = []; try { txs = JSON.parse(txInput); } catch { }
+                                    const ev = txs[i % Math.max(1, txs.length)] ?? {};
+                                    return (
+                                        <div key={i} className={styles.auditCard}>
+                                            <div className={styles.auditHead}>
+                                                <span>{t.audit.event} #{Math.floor(Math.random() * 8000) + 1000}</span>
+                                                <span className={styles.auditMeta}>{Object.entries(ev).map(([k, v]) => `${k}: ${v}`).join(' · ')}</span>
+                                            </div>
+                                            {activeRules.map(r => (
+                                                <div key={r.id} className={styles.auditRule}>
+                                                    <span>{t.audit.rule} <span className={styles.cyan}>{r.id}</span></span>
+                                                    <span>{activeProfile.auditActionLabel}: <span className={styles.green}>{isCurrency ? "$" : ""}{(result.ruleFees[r.id]?.[i] ?? 0).toFixed(2)}</span></span>
+                                                </div>
+                                            ))}
+                                            <div className={styles.auditTotal}>{t.audit.total} {isCurrency ? "$" : ""}{fee.toFixed(2)}</div>
+                                        </div>
+                                    );
+                                })}
+                                <div className={styles.auditFooter}>
+                                    <button className={styles.auditToggle} onClick={() => setAuditExpanded(!auditExpanded)}>
+                                        {auditExpanded ? t.audit.showLess : t.audit.showAll}
+                                    </button>
+                                    {result.fees.length > auditEventsToShow && (
+                                        <span className={styles.auditMore}>{t.audit.more.replace('{count}', (result.fees.length - auditEventsToShow).toLocaleString())}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </section>
+            </div>
+
+            {/* Advanced */}
+            <div className={styles.advWrap}>
+                <button className={styles.advToggle} onClick={() => setShowAdvanced(!showAdvanced)}>{t.advanced.toggle}</button>
                 {showAdvanced && (
-                    <div className={styles.editor}>
-                        <div className={styles.editorPanel}>
-                            <h3>Regla de Pricing (JSON)</h3>
-                            <textarea
-                                className={styles.codeArea}
-                                value={rulesJson}
-                                onChange={(e) => setRulesJson(e.target.value)}
-                                rows={10}
-                            />
-                        </div>
-                        <div className={styles.editorPanel}>
-                            <h3>Transacciones (JSON)</h3>
-                            <textarea
-                                className={styles.codeArea}
-                                value={txInput}
-                                onChange={(e) => setTxInput(e.target.value)}
-                                rows={10}
-                            />
-                        </div>
+                    <div className={styles.advEditor}>
+                        <div><h4>{t.advanced.ruleEditor}</h4><textarea className={styles.code} value={rulesJson} onChange={e => setRulesJson(e.target.value)} rows={8} /></div>
+                        <div><h4>{t.advanced.dataEditor}</h4><textarea className={styles.code} value={txInput} onChange={e => setTxInput(e.target.value)} rows={8} /></div>
                     </div>
                 )}
-            </section>
+            </div>
 
-            {/* Why Tempus Section */}
-            <section className={styles.whyTempusSection}>
-                <h2>Why Tempus</h2>
-                <ul className={styles.whyList}>
-                    <li><span className={styles.dotTeal}></span> <strong>Deterministic rule engine:</strong> The exact same input yields the exact same computational output. Guaranteed.</li>
-                    <li><span className={styles.dotTeal}></span> <strong>Versioned rules:</strong> Rollback to a specific historical regime smoothly via pure code.</li>
-                    <li><span className={styles.dotTeal}></span> <strong>Massive scenario simulation:</strong> Project P&L impacts against millions of historic transactions instantly.</li>
-                    <li><span className={styles.dotTeal}></span> <strong>Rust + WebAssembly performance:</strong> Memory-safe, C-level speed embedded on client or edge nodes.</li>
-                    <li><span className={styles.dotTeal}></span> <strong>Explainable decisions:</strong> Immutable audit trails matching exactly which rule hit which specific transaction block.</li>
-                </ul>
-            </section>
-
-            {/* Footer */}
-            <footer className={styles.footer}>
-                <p className={styles.footerBrand}>Tempus Engine</p>
-            </footer>
+            {error && <div className={styles.err}>❌ {error}</div>}
         </main>
     );
 }

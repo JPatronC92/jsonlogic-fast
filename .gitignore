@@ -1,3 +1,6 @@
+# ─────────────────────────────────────────
+# Python
+# ─────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
@@ -6,20 +9,65 @@ __pycache__/
 env/
 venv/
 .venv/
-.env
-.DS_Store
-.coverage
-htmlcov/
-dist/
-build/
+.python-version
+uv.lock
+pyproject.toml
+alembic.ini
 *.egg-info/
-tempus_pgdata/
+htmlcov/
+.coverage
 .pytest_cache/
+.ruff_cache/
 
-# Node
-node_modules/
+# ─────────────────────────────────────────
+# Secrets & Environment
+# ─────────────────────────────────────────
+.env
+# keep .env.example so contributors know what vars are needed
+!.env.example
 
+# ─────────────────────────────────────────
+# Private / Internal Documentation
+# BITACORA.md is a private dev journal — keep local, never push.
+# ─────────────────────────────────────────
+BITACORA.md
+
+# ─────────────────────────────────────────
 # Rust
+# ─────────────────────────────────────────
 target/
 **/*.rs.bk
+
+# ─────────────────────────────────────────
+# Node / Next.js
+# ─────────────────────────────────────────
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+.turbo/
+
+# ─────────────────────────────────────────
+# Docker / DB volumes
+# ─────────────────────────────────────────
+tempus_pgdata/
+docker-compose.override.yml
+
+# ─────────────────────────────────────────
+# OS / Editor
+# ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ─────────────────────────────────────────
+# Distribution / Build
+# ─────────────────────────────────────────
+dist/
+build/
 
