@@ -41,6 +41,9 @@ export default function PublicSimulator() {
     const [auditExpanded, setAuditExpanded] = useState(false);
     const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
+    const [isEditingBaseline, setIsEditingBaseline] = useState(false);
+    const [customBaselineInput, setCustomBaselineInput] = useState("");
+    const [customBaseline, setCustomBaseline] = useState<number | null>(null);
 
     const t = dict[lang];
     const profile = TEMPLATES[0].presentation_profile[lang];
@@ -144,6 +147,7 @@ export default function PublicSimulator() {
     const txLabels: Record<number, string> = { 100: "100", 1000: "1K", 10000: "10K", 1000000: "High-Volume Execution (1M Tx)" };
 
     const auditEventsToShow = auditExpanded ? 5 : 1;
+    const effectiveBaseline = customBaseline ?? baselineResult?.totalRevenue ?? result?.totalRevenue ?? 0;
 
     return (
         <main className={styles.app}>
@@ -227,9 +231,52 @@ export default function PublicSimulator() {
 
                             {/* Stats */}
                             <div className={styles.statsGrid}>
-                                <div className={styles.stat}>
-                                    <span className={styles.statLabel}>{t.results.baseline}</span>
-                                    <span className={styles.statNum}>{isCurrency ? "$" : ""}<CountUp end={baselineResult?.totalRevenue ?? result.totalRevenue} duration={0.3} decimals={isCurrency ? 2 : 0} separator="," /></span>
+                                <div className={styles.stat} style={{ position: 'relative' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', marginBottom: '0.3rem' }}>
+                                        <span className={styles.statLabel} style={{ marginBottom: 0 }}>{t.results.baseline}</span>
+                                        <button 
+                                            onClick={() => {
+                                                setIsEditingBaseline(!isEditingBaseline);
+                                                if (!isEditingBaseline) {
+                                                    setCustomBaselineInput(effectiveBaseline.toString());
+                                                }
+                                            }} 
+                                            className={styles.editBtn} 
+                                            title="Edit Baseline"
+                                        >
+                                            ✎
+                                        </button>
+                                    </div>
+                                    {isEditingBaseline ? (
+                                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginTop: '4px' }}>
+                                            <input 
+                                                type="number" 
+                                                className={styles.baselineInput}
+                                                value={customBaselineInput} 
+                                                onChange={e => setCustomBaselineInput(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') {
+                                                        const val = parseFloat(customBaselineInput);
+                                                        setCustomBaseline(!isNaN(val) ? val : null);
+                                                        setIsEditingBaseline(false);
+                                                    }
+                                                }}
+                                                autoFocus
+                                            />
+                                            <button 
+                                                className={styles.baselineSaveBtn}
+                                                onClick={() => {
+                                                    const val = parseFloat(customBaselineInput);
+                                                    setCustomBaseline(!isNaN(val) ? val : null);
+                                                    setIsEditingBaseline(false);
+                                                }}
+                                            >
+                                                ✓
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className={styles.statNum}>{isCurrency ? "$" : ""}<CountUp end={effectiveBaseline} duration={0.3} decimals={isCurrency ? 2 : 0} separator="," /></span>
+                                    )}
                                 </div>
                                 <div className={`${styles.stat} ${styles.statHL}`}>
                                     <span className={styles.statLabel}>{t.results.projected}</span>
@@ -237,9 +284,9 @@ export default function PublicSimulator() {
                                 </div>
                                 <div className={styles.stat}>
                                     <span className={styles.statLabel}>{t.results.delta}</span>
-                                    <span className={`${styles.statNum} ${baselineResult && result.totalRevenue !== baselineResult.totalRevenue ? (result.totalRevenue > baselineResult.totalRevenue ? styles.green : styles.red) : styles.dim}`}>
-                                        {baselineResult && result.totalRevenue !== baselineResult.totalRevenue
-                                            ? <CountUp end={((result.totalRevenue - baselineResult.totalRevenue) / Math.max(1, baselineResult.totalRevenue)) * 100} duration={0.3} decimals={2} prefix={result.totalRevenue > baselineResult.totalRevenue ? "+" : ""} suffix="%" />
+                                    <span className={`${styles.statNum} ${result.totalRevenue !== effectiveBaseline ? (result.totalRevenue > effectiveBaseline ? styles.green : styles.red) : styles.dim}`}>
+                                        {result.totalRevenue !== effectiveBaseline
+                                            ? <CountUp end={((result.totalRevenue - effectiveBaseline) / Math.max(1, effectiveBaseline)) * 100} duration={0.3} decimals={2} prefix={result.totalRevenue > effectiveBaseline ? "+" : ""} suffix="%" />
                                             : "0.00%"}
                                     </span>
                                 </div>
@@ -265,10 +312,10 @@ export default function PublicSimulator() {
                             <div className={styles.conclusionBox}>
                                 <h3>{t.businessConclusion.title}</h3>
                                 <p>
-                                    {baselineResult && result.totalRevenue > baselineResult.totalRevenue 
-                                        ? t.businessConclusion.positive.replace('{amount}', `${isCurrency ? "$" : ""}${Math.abs(result.totalRevenue - baselineResult.totalRevenue).toLocaleString(undefined, { maximumFractionDigits: 2 })}`)
-                                        : baselineResult && result.totalRevenue < baselineResult.totalRevenue 
-                                            ? t.businessConclusion.negative.replace('{amount}', `${isCurrency ? "$" : ""}${Math.abs(result.totalRevenue - baselineResult.totalRevenue).toLocaleString(undefined, { maximumFractionDigits: 2 })}`)
+                                    {result.totalRevenue > effectiveBaseline 
+                                        ? t.businessConclusion.positive.replace('{amount}', `${isCurrency ? "$" : ""}${Math.abs(result.totalRevenue - effectiveBaseline).toLocaleString(undefined, { maximumFractionDigits: 2 })}`)
+                                        : result.totalRevenue < effectiveBaseline 
+                                            ? t.businessConclusion.negative.replace('{amount}', `${isCurrency ? "$" : ""}${Math.abs(result.totalRevenue - effectiveBaseline).toLocaleString(undefined, { maximumFractionDigits: 2 })}`)
                                             : t.businessConclusion.neutral
                                     }
                                 </p>

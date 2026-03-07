@@ -644,6 +644,62 @@
     color: var(--info);
 }
 
+/* ─── Editable Baseline ─── */
+.editBtn {
+    background: transparent;
+    border: none;
+    color: var(--text-ghost);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.editBtn:hover {
+    color: var(--brand-primary-light);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.baselineInput {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-glow);
+    color: var(--brand-primary-light);
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    width: 100px;
+    text-align: center;
+    border-radius: 4px;
+    padding: 0.1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.baselineInput:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.2);
+}
+
+.baselineSaveBtn {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid var(--success);
+    color: var(--success);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0 0.4rem;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.baselineSaveBtn:hover {
+    background: var(--success);
+    color: white;
+}
+
 /* ─── Breakdown Bar ─── */
 .barWrap {
     margin-bottom: 1.25rem;
