@@ -1,39 +1,5 @@
-# Tempus: The Deterministic Billing Infrastructure for Fintech ⏳💰
 
-**Stop burying your pricing logic in spaghetti code. Start treating commissions as versioned, auditable, and high-performance financial assets.**
-
-Tempus is a mission-critical pricing engine designed to handle the complexity of modern Fintech, SaaS, and Marketplaces. It replaces hard-coded `if/else` billing logic with a **Deterministic Rust Core** that guarantees sub-millisecond precision and absolute historical auditability.
-
----
-
-## 🛑 The $100M Problem: Billing Drift
-Most financial platforms suffer from "Billing Drift":
-- **Audit Nightmares:** Inability to prove *exactly* how a fee was calculated 2 years ago.
-- **Engineering Bottlenecks:** Every pricing change requires a code deploy and weeks of QA.
-- **Loss of Revenue:** Hidden bugs in complex commission splits that go unnoticed for months.
-- **Latency:** Slow billing engines that can't scale with high-frequency transaction volumes.
-
-**Tempus solves this by decoupling your pricing logic from your core application code.**
-
----
-
-## 🌟 Superpowers for CFOs and CTOs
-
-### 🕰️ Absolute Time-Travel Audit
-Leveraging PostgreSQL's `DATERANGE` and Rust-level constraints, Tempus mathematically guarantees that pricing versions never overlap. You can execute any transaction against the **exact** legal rules active at any point in history.
-
-### 🦀 1.3M TPS Performance (Rust Core)
-The mathematical heart of Tempus is written in **Rust**. Using `PyO3`, we achieve **1,349,995 evaluations per second**. This isn't just fast; it's high-frequency trading speed, ready for Stripe-scale operations.
-
-### 🧠 Zero-Float Determinism
-By using `json-logic` and strict decimal handling, Tempus ensures that given the same input, the output is identical—forever. No more floating-point errors in your financial reports.
-
-### 📊 Revenue Forecasting (Batch Simulator)
-Test new pricing tiers against millions of historical transactions *before* you deploy. Know exactly how a 0.5% fee change will impact your P&L before it goes live.
-
----
-
-## 💳 Commercial Licensing & Services
+💳 Commercial Licensing & Services
 
 Tempus is a proprietary infrastructure. We offer three flexible tiers to align with your business growth:
 
@@ -56,7 +22,7 @@ Tempus is a proprietary infrastructure. We offer three flexible tiers to align w
 
 ---
 
-## 🚀 Roadmap
+🚀 Roadmap
 
 - [x] **Rust Core (v1.0):** 1.3M TPS evaluation engine.
 - [x] **Batch Simulator:** Historical P&L auditing.
