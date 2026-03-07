@@ -10,8 +10,8 @@ env/
 venv/
 .venv/
 .python-version
-uv.lock
-pyproject.toml
+# uv.lock  <-- Removed from ignore
+# pyproject.toml <-- Removed from ignore
 alembic.ini
 *.egg-info/
 htmlcov/
