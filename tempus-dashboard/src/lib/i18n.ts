@@ -61,6 +61,22 @@ export const dict = {
             toggle: "Advanced",
             ruleEditor: "Rule (JSON)",
             dataEditor: "Data (JSON)"
+        },
+        contextIntro: {
+            problem: "The Problem",
+            solution: "The Tempus Solution",
+            cta: "Adjust parameters on the left and hit Run"
+        },
+        businessConclusion: {
+            title: "Business Conclusion",
+            positive: "By applying this new structure, you have discovered {amount} in previously lost revenue (Billing Drift) that Tempus would capture automatically with zero latency risks.",
+            negative: "Applying this structure results in a {amount} variance compared to the baseline, enabling you to deploy aggressive pricing strategies safely.",
+            neutral: "This structure maintains your baseline revenue while moving your pricing logic to a deterministic, zero-latency engine."
+        },
+        telemetryDetails: {
+            throughput: "Supports Black-Friday traffic without sweating.",
+            determinism: "Zero risk of mischarging. Same input, same output. Always.",
+            time: "Doesn't slow down your website or checkout."
         }
     },
     es: {
@@ -123,6 +139,22 @@ export const dict = {
             toggle: "Avanzado",
             ruleEditor: "Regla (JSON)",
             dataEditor: "Datos (JSON)"
+        },
+        contextIntro: {
+            problem: "El Problema",
+            solution: "La Solución Tempus",
+            cta: "Ajusta los parámetros a la izquierda y presiona Ejecutar"
+        },
+        businessConclusion: {
+            title: "Conclusión de Negocio",
+            positive: "Al aplicar esta nueva estructura, has descubierto {amount} de ingresos perdidos (Billing Drift) que Tempus capturaría automáticamente sin riesgo de caída del servidor.",
+            negative: "Aplicar esta estructura resulta en una variación de {amount} respecto a tu base, permitiéndote desplegar estrategias agresivas con total seguridad.",
+            neutral: "Esta estructura mantiene tus ingresos base alineados, pero migrando tu lógica a un motor determinista de latencia cero."
+        },
+        telemetryDetails: {
+            throughput: "Soporta tráfico de Black-Friday sin sudar.",
+            determinism: "Cero riesgo de sobrecobrar. Mismo input, mismo cálculo. Siempre.",
+            time: "No ralentiza tu página web ni tu checkout."
         }
     }
 };
