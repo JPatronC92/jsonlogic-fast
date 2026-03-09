@@ -73,7 +73,7 @@ async def get_tenant_by_api_key(api_key: str, db: AsyncSession) -> Optional[Tena
     result = await db.execute(
         select(APIKey)
         .options(selectinload(APIKey.tenant))
-        .where(APIKey.key_hash == sha256_hash, APIKey.is_active == True)
+        .where(APIKey.key_hash == sha256_hash, APIKey.is_active == True)  # noqa: E712
     )
     api_key_obj = result.scalar_one_or_none()
     if api_key_obj:

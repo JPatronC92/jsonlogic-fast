@@ -13,7 +13,7 @@ import uuid
 from datetime import date
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from psycopg2.extras import DateRange
+from asyncpg import Range
 
 from src.domain.models import (
     Base, Tenant, APIKey, PricingScheme,
@@ -116,7 +116,7 @@ async def seed():
             rule_uuid=rule_identity.uuid,
             schema_id=context_schema.id,
             logica_json=tiered_logic,
-            vigencia=DateRange(date(2024, 1, 1), None),  # Active from Jan 2024, no end date
+            vigencia=Range(date(2024, 1, 1), None),  # Active from Jan 2024, no end date
             hash_firma=hashlib.sha256(str(tiered_logic).encode()).hexdigest(),
             hash_algoritmo="SHA-256"
         )

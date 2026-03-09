@@ -3,7 +3,7 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Tempus Rule Engine"
+    PROJECT_NAME: str = "Tempus Pricing Engine"
     API_V1_STR: str = "/api/v1"
 
     # Base de Datos (PostgreSQL)

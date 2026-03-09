@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tempus | Deterministic Billing",
-  description: "High-performance time-travel pricing engine.",
+  title: "Tempus | Simulador de Comisiones",
+  description:
+    "Simula modelos de comisiones al instante con el motor Tempus en Rust/WebAssembly. 100% en tu navegador, sin registro, gratis.",
 };
 
 export default function RootLayout({
@@ -23,14 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <nav style={{ padding: '1rem 2rem', borderBottom: '1px solid #334155', display: 'flex', gap: '2rem', background: '#0f172a' }}>
-          <div style={{ fontWeight: 'bold', color: '#60a5fa' }}>TEMPUS</div>
-          <a href="/" style={{ color: '#cbd5e1', textDecoration: 'none' }}>Home</a>
-          <a href="/dashboard" style={{ color: '#cbd5e1', textDecoration: 'none' }}>Batch Simulator</a>
-          <a href="/builder" style={{ color: '#cbd5e1', textDecoration: 'none' }}>Visual Rule Builder</a>
-        </nav>
         {children}
       </body>
     </html>

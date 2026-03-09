@@ -1,0 +1,16 @@
+{
+  "name": "tempus_wasm",
+  "type": "module",
+  "description": "Tempus Pricing Engine compiled to WebAssembly for browser-side evaluation",
+  "version": "0.1.0",
+  "files": [
+    "tempus_wasm_bg.wasm",
+    "tempus_wasm.js",
+    "tempus_wasm.d.ts"
+  ],
+  "main": "tempus_wasm.js",
+  "types": "tempus_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

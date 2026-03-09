@@ -1,5 +1,5 @@
 [project]
-name = "tempus-rule-engine"
+name = "tempus-engine"
 version = "0.1.0"
 description = "Universal, Time-Travel Compliance Infrastructure"
 readme = "README.md"
