@@ -6,6 +6,7 @@ for a clean-start production deployment.
 Usage:
     python -m scripts.seed
 """
+
 import asyncio
 import hashlib
 import secrets
@@ -16,15 +17,22 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from asyncpg import Range
 
 from src.domain.models import (
-    Base, Tenant, APIKey, PricingScheme,
-    PricingRuleIdentity, PricingRuleVersion, PricingContextSchema
+    Base,
+    Tenant,
+    APIKey,
+    PricingScheme,
+    PricingRuleIdentity,
+    PricingRuleVersion,
+    PricingContextSchema,
 )
 from src.core.config import get_settings
 
 settings = get_settings()
 
 engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, echo=False)
-SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+SessionLocal = async_sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
 
 
 def generate_api_key() -> tuple[str, str]:
@@ -40,10 +48,7 @@ async def seed():
 
     async with SessionLocal() as session:
         # ── 1. Create Demo Tenant ──────────────────────────────
-        tenant = Tenant(
-            id=uuid.uuid4(),
-            name="Tempus Demo Corp"
-        )
+        tenant = Tenant(id=uuid.uuid4(), name="Tempus Demo Corp")
         session.add(tenant)
         await session.flush()  # Get tenant.id
 
@@ -53,7 +58,7 @@ async def seed():
             tenant_id=tenant.id,
             key_hash=key_hash,
             name="Demo Production Key",
-            is_active=True
+            is_active=True,
         )
         session.add(api_key)
 
@@ -67,10 +72,10 @@ async def seed():
                 "properties": {
                     "amount": {"type": "number"},
                     "method": {"type": "string"},
-                    "total_volume": {"type": "number"}
+                    "total_volume": {"type": "number"},
                 },
-                "required": ["amount"]
-            }
+                "required": ["amount"],
+            },
         )
         session.add(context_schema)
         await session.flush()
@@ -80,16 +85,14 @@ async def seed():
             tenant_id=tenant.id,
             urn="urn:pricing:marketplace:mx",
             name="Marketplace MX Standard",
-            description="Default pricing scheme for Mexican marketplace transactions"
+            description="Default pricing scheme for Mexican marketplace transactions",
         )
         session.add(scheme)
         await session.flush()
 
         # ── 5. Create Pricing Rule (Tiered Commission) ────────
         rule_identity = PricingRuleIdentity(
-            scheme_id=scheme.id,
-            name="Credit Card Commission",
-            fee_type="PERCENTAGE"
+            scheme_id=scheme.id, name="Credit Card Commission", fee_type="PERCENTAGE"
         )
         session.add(rule_identity)
         await session.flush()
@@ -100,15 +103,19 @@ async def seed():
             "if": [
                 {">": [{"var": "amount"}, 10000]},
                 {"*": [{"var": "amount"}, 0.015]},
-                {"if": [
-                    {">": [{"var": "amount"}, 5000]},
-                    {"*": [{"var": "amount"}, 0.025]},
-                    {"if": [
-                        {">": [{"var": "amount"}, 1000]},
-                        {"*": [{"var": "amount"}, 0.03]},
-                        {"*": [{"var": "amount"}, 0.035]}
-                    ]}
-                ]}
+                {
+                    "if": [
+                        {">": [{"var": "amount"}, 5000]},
+                        {"*": [{"var": "amount"}, 0.025]},
+                        {
+                            "if": [
+                                {">": [{"var": "amount"}, 1000]},
+                                {"*": [{"var": "amount"}, 0.03]},
+                                {"*": [{"var": "amount"}, 0.035]},
+                            ]
+                        },
+                    ]
+                },
             ]
         }
 
@@ -118,7 +125,7 @@ async def seed():
             logica_json=tiered_logic,
             vigencia=Range(date(2024, 1, 1), None),  # Active from Jan 2024, no end date
             hash_firma=hashlib.sha256(str(tiered_logic).encode()).hexdigest(),
-            hash_algoritmo="SHA-256"
+            hash_algoritmo="SHA-256",
         )
         session.add(rule_version)
 
@@ -132,9 +139,9 @@ async def seed():
         print(f"  Tenant ID:    {tenant.id}")
         print(f"  Scheme URN:   {scheme.urn}")
         print(f"  Rule:         {rule_identity.name} ({rule_identity.fee_type})")
-        print(f"\n  🔑 API Key (SAVE THIS — shown only once):")
+        print("\n  🔑 API Key (SAVE THIS — shown only once):")
         print(f"     {raw_key}")
-        print(f"\n  Use it with:")
+        print("\n  Use it with:")
         print(f'     curl -H "X-API-Key: {raw_key}" ...')
         print("=" * 60 + "\n")
 
