@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": process.env.TEMPUS_API_KEY || "test-api-key",
+        "X-API-Key": process.env.TEMPUS_API_KEY || "",
       },
       body: JSON.stringify(body),
     });
