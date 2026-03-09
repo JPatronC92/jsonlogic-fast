@@ -6,6 +6,7 @@ from src.domain.models import Base
 
 settings = get_settings()
 
+
 @pytest.fixture(scope="function")
 async def engine():
     engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, future=True)
@@ -19,13 +20,16 @@ async def engine():
     finally:
         await engine.dispose()
 
+
 @pytest.fixture(scope="function")
 async def session(engine) -> AsyncGenerator[AsyncSession, None]:
     # Create tables for testing
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    SessionLocal = async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
     async with SessionLocal() as session:
         yield session
         await session.rollback()

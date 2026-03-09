@@ -3,6 +3,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Any, Dict
 
+
 def _to_iso_utc(value: datetime | str | None) -> str | None:
     if value is None:
         return None
@@ -13,6 +14,7 @@ def _to_iso_utc(value: datetime | str | None) -> str | None:
             value = value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     raise TypeError("Unsupported date type for canonicalization")
+
 
 def canonicalize_payload(
     *,
@@ -38,6 +40,7 @@ def canonicalize_payload(
     )
 
     return canonical_str.encode("utf-8")
+
 
 def sha256_hash(canonical_bytes: bytes) -> str:
     return hashlib.sha256(canonical_bytes).hexdigest()
