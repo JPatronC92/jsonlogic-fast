@@ -1,5 +1,5 @@
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List
+from pydantic import BaseModel
 
 class FeeBreakdown(BaseModel):
     rule_id: str

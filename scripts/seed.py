@@ -132,9 +132,9 @@ async def seed():
         print(f"  Tenant ID:    {tenant.id}")
         print(f"  Scheme URN:   {scheme.urn}")
         print(f"  Rule:         {rule_identity.name} ({rule_identity.fee_type})")
-        print(f"\n  🔑 API Key (SAVE THIS — shown only once):")
+        print("\n  🔑 API Key (SAVE THIS — shown only once):")
         print(f"     {raw_key}")
-        print(f"\n  Use it with:")
+        print("\n  Use it with:")
         print(f'     curl -H "X-API-Key: {raw_key}" ...')
         print("=" * 60 + "\n")
 
