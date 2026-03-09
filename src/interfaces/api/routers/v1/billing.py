@@ -84,7 +84,7 @@ async def calculate_billing_fees(
         return resultado
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except Exception:
+    except Exception as e:
         raise HTTPException(
-            status_code=500, detail="Error interno calculando comisiones."
+            status_code=500, detail=f"Error interno calculando comisiones: {str(e)}"
         )

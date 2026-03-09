@@ -56,10 +56,6 @@ async def get_tenant_by_api_key(api_key: str, db: AsyncSession) -> Optional[Tena
     """Retrieve the tenant associated with a given API Key hash."""
     # Assuming the API Key passed is already hashed or we do a simple query
     # In a prod environment, the raw API key should be hashed. For MVP we'll query directly
-    # (or you hash it before querying)
-    hashed_key = get_password_hash(
-        api_key
-    )  # If stored hashed, you must check all keys, or store the hash properly
     # Actually, passlib's verify is used for bcrypt because the hash changes.
     # Usually API keys are SHA-256 hashed once if we want to query them quickly.
     # To keep it simple, we'll assume `key_hash` is just the plain key for MVP or we query and verify.
