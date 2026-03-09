@@ -96,6 +96,17 @@ class PricingRuleVersion(Base):
     rule = relationship("PricingRuleIdentity", back_populates="versiones")
     context_schema = relationship("PricingContextSchema")
 
+    # Mapped for internal JSON string cache
+    __allow_unmapped__ = True
+    _logica_json_str: Optional[str] = None
+
+    @property
+    def logica_json_str(self) -> str:
+        if self._logica_json_str is None:
+            import json
+            self._logica_json_str = json.dumps(self.logica_json)
+        return self._logica_json_str
+
     # Time-Travel Constraint: Imposible solapar versiones de la misma regla
     __table_args__ = (
         ExcludeConstraint(
