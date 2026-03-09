@@ -1,0 +1,57 @@
+import pytest
+import uuid
+import jwt
+from datetime import datetime, timedelta, timezone
+from fastapi import HTTPException
+from src.core.security import (
+    get_current_tenant,
+    create_access_token,
+    settings,
+    ALGORITHM,
+)
+
+
+@pytest.mark.asyncio
+async def test_get_current_tenant_valid_token():
+    # Setup
+    tenant_id = uuid.uuid4()
+    token = create_access_token({"sub": str(tenant_id)})
+
+    # Mock DB session
+    class MockResult:
+        def scalar_one_or_none(self):
+            class MockTenant:
+                id = tenant_id
+
+            return MockTenant()
+
+    class MockDB:
+        async def execute(self, query):
+            return MockResult()
+
+    # Execute
+    tenant = await get_current_tenant(token=token, api_key=None, db=MockDB())
+
+    # Assert
+    assert tenant.id == tenant_id
+
+
+@pytest.mark.asyncio
+async def test_get_current_tenant_invalid_audience():
+    # Setup token with wrong audience
+    tenant_id = uuid.uuid4()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode = {"sub": str(tenant_id), "exp": expire, "aud": "wrong-audience"}
+    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+    # Mock DB session
+    class MockDB:
+        async def execute(self, query):
+            pass  # Shouldn't reach here
+
+    # Execute and Assert
+    with pytest.raises(HTTPException) as exc_info:
+        await get_current_tenant(token=token, api_key=None, db=MockDB())
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Could not validate credentials"
