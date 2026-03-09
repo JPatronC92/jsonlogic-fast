@@ -1,5 +1,4 @@
 import time
-import uuid
 import json
 from json_logic import jsonLogic
 import tempus_core
@@ -35,7 +34,7 @@ for tx in transacciones:
     python_total += fee
 
 python_duration = time.perf_counter() - start_time
-print(f"🐍 Vía Lenta (Python json-logic):")
+print("🐍 Vía Lenta (Python json-logic):")
 print(f"   -> Tiempo total: {python_duration:.4f} segundos")
 print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / python_duration:,.0f} req/s\n")
 
@@ -52,7 +51,7 @@ for tx_str in tx_strings:
     rust_total += fee
 
 rust_duration = time.perf_counter() - start_time
-print(f"🦀 Vía Rápida Individual (Rust tempus_core):")
+print("🦀 Vía Rápida Individual (Rust tempus_core):")
 print(f"   -> Tiempo total: {rust_duration:.4f} segundos")
 print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_duration:,.0f} req/s\n")
 
@@ -64,7 +63,7 @@ batch_results = tempus_core.evaluate_batch(logica_str, tx_strings)
 rust_batch_total = sum(batch_results)
 
 rust_batch_duration = time.perf_counter() - start_time
-print(f"🚀🚀 Vía Ultra Rápida Batch (Rust tempus_core Arrays):")
+print("🚀🚀 Vía Ultra Rápida Batch (Rust tempus_core Arrays):")
 print(f"   -> Tiempo total: {rust_batch_duration:.4f} segundos")
 print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_batch_duration:,.0f} req/s\n")
 
