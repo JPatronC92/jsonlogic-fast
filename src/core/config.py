@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Tempus Pricing Engine"
     API_V1_STR: str = "/api/v1"
@@ -13,13 +14,17 @@ class Settings(BaseSettings):
 
     # Flags de Seguridad
     SECRET_KEY: str
-    ENVIRONMENT: str = "local" # local, staging, production
+    JWT_AUDIENCE: str = "tempus-app"
+    ENVIRONMENT: str = "local"  # local, staging, production
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", case_sensitive=True, extra="ignore"
+    )
+
 
 @lru_cache
 def get_settings():
