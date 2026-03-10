@@ -1,0 +1,3 @@
+Benchmark Results (100 rules, 1000 iterations):
+Average time per calculate call: 184.735 ms
+Median time per calculate call:  168.401 ms

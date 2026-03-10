@@ -122,13 +122,16 @@ class PricingEngine:
         reglas_hashes = []
 
         # 3. Evaluación Matemática Determinista
+        ctx_str = None
+        if RUST_CORE_AVAILABLE:
+            ctx_str = json.dumps(contexto_tx)
+
         for regla_version in reglas_activas:
             try:
                 if RUST_CORE_AVAILABLE:
                     try:
                         # 🦀 Vía Rápida (Rust Native)
                         rule_str = json.dumps(regla_version.logica_json)
-                        ctx_str = json.dumps(contexto_tx)
                         fee_amount = tempus_core.evaluate_fee(rule_str, ctx_str)
                     except Exception as rust_err:
                         logger.warning(f"Tempus Core (Rust) falló para regla {regla_version.rule.name}, fallback a Python: {rust_err}")
