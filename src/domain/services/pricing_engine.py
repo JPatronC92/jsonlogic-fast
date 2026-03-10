@@ -50,7 +50,9 @@ class PricingEngine:
                 fees_por_tx = [0.0] * local_success_count
                 
                 for regla_version in reglas_activas:
-                    rule_str = json.dumps(regla_version.logica_json)
+                    if not hasattr(regla_version, "_cached_rule_str"):
+                        regla_version._cached_rule_str = json.dumps(regla_version.logica_json)
+                    rule_str = regla_version._cached_rule_str
                     batch_fees = tempus_core.evaluate_batch(rule_str, valid_tx_strings)
                     for i, fee in enumerate(batch_fees):
                         fees_por_tx[i] += fee
@@ -127,7 +129,9 @@ class PricingEngine:
                 if RUST_CORE_AVAILABLE:
                     try:
                         # 🦀 Vía Rápida (Rust Native)
-                        rule_str = json.dumps(regla_version.logica_json)
+                        if not hasattr(regla_version, "_cached_rule_str"):
+                            regla_version._cached_rule_str = json.dumps(regla_version.logica_json)
+                        rule_str = regla_version._cached_rule_str
                         ctx_str = json.dumps(contexto_tx)
                         fee_amount = tempus_core.evaluate_fee(rule_str, ctx_str)
                     except Exception as rust_err:
