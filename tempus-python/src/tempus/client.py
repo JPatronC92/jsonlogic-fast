@@ -1,11 +1,9 @@
-import httpx
 from typing import Any, Dict, List
-from .types import (
-    CalculateFeeResponse,
-    BatchSimulateResponse,
-    CalculateRequest,
-    BatchSimulateRequest,
-)
+
+import httpx
+
+from .types import (BatchSimulateRequest, BatchSimulateResponse,
+                    CalculateFeeResponse, CalculateRequest)
 
 
 class TempusError(Exception):

@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.core.security import get_current_tenant
 from src.domain.models import Tenant
-from src.domain.schemas.pricing import (BatchSimulateRequest,
-                                        BatchSimulateResponse,
-                                        CalculateFeeRequest,
-                                        CalculateFeeResponse)
+from src.domain.schemas.pricing import (
+    BatchSimulateRequest,
+    BatchSimulateResponse,
+    CalculateFeeRequest,
+    CalculateFeeResponse,
+)
 from src.domain.services.pricing_engine import PricingEngine
 from src.infrastructure.repository import PricingRepository
 from src.interfaces.api.dependencies import SessionDep
