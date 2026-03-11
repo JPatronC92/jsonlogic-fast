@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
+from passlib.context import CryptContext
+
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
@@ -27,6 +29,8 @@ ALGORITHM = "HS256"
 # In a real app, this should be longer or have refresh tokens
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_password_hash(password):
     return pwd_context.hash(password)
