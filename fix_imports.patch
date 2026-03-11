@@ -1,0 +1,52 @@
+<<<<<<< SEARCH
+from src.core.config import get_settings
+from src.domain.models import APIKey, Tenant
+from src.infrastructure.database import get_db
+
+settings = get_settings()
+
+# Para el dashboard y UI
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False
+)
+
+# Para SDKs y B2B
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+ALGORITHM = "HS256"
+# In a real app, this should be longer or have refresh tokens
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+
+
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+=======
+from passlib.context import CryptContext
+
+from src.core.config import get_settings
+from src.domain.models import APIKey, Tenant
+from src.infrastructure.database import get_db
+
+settings = get_settings()
+
+# Para el dashboard y UI
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False
+)
+
+# Para SDKs y B2B
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+ALGORITHM = "HS256"
+# In a real app, this should be longer or have refresh tokens
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+>>>>>>> REPLACE

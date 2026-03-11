@@ -66,6 +66,14 @@ def test_pricing_engine_fails_on_invalid_schema(active_rules):
         engine.calculate(context, active_rules)
 
 
+def test_pricing_engine_invalid_amount_type():
+    engine = PricingEngine()
+    context = {"amount": "abc"}
+
+    with pytest.raises(ValueError, match="El 'amount' base de la transacción debe ser numérico."):
+        engine.calculate(context, [])
+
+
 def test_pricing_engine_simulate_batch(active_rules):
     engine = PricingEngine()
     transacciones = [

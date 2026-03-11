@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
+from passlib.context import CryptContext
+
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
@@ -10,11 +12,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from passlib.context import CryptContext
+
 from src.core.config import get_settings
 from src.domain.models import APIKey, Tenant
 from src.infrastructure.database import get_db
 
 settings = get_settings()
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Para el dashboard y UI
 oauth2_scheme = OAuth2PasswordBearer(
@@ -24,12 +30,16 @@ oauth2_scheme = OAuth2PasswordBearer(
 # Para SDKs y B2B
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+from passlib.context import CryptContext
+
 ALGORITHM = "HS256"
 # In a real app, this should be longer or have refresh tokens
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)

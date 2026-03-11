@@ -6,11 +6,11 @@ import pytest
 from fastapi import HTTPException
 
 from src.core.security import (
+    get_password_hash,
     ALGORITHM,
     create_access_token,
     get_current_tenant,
     get_password_hash,
-    verify_password,
     settings,
 )
 
@@ -66,6 +66,18 @@ def test_get_password_hash():
     hashed_password = get_password_hash(password)
     assert hashed_password != password
     assert len(hashed_password) > 0
+    assert hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$")
+
+def test_verify_password_correct():
+    password = "secretpassword"
+    hashed_password = get_password_hash(password)
+    assert verify_password(password, hashed_password) is True
+
+
+def test_verify_password_incorrect():
+    password = "secretpassword"
+    hashed_password = get_password_hash(password)
+    assert verify_password("wrongpassword", hashed_password) is False
 
 
 def test_password_hashing_is_nondeterministic():
@@ -73,10 +85,5 @@ def test_password_hashing_is_nondeterministic():
     hash1 = get_password_hash(password)
     hash2 = get_password_hash(password)
     assert hash1 != hash2
-
-
-def test_verify_password():
-    password = "secretpassword"
-    hashed_password = get_password_hash(password)
-    assert verify_password(password, hashed_password) is True
-    assert verify_password("wrongpassword", hashed_password) is False
+    assert verify_password(password, hash1) is True
+    assert verify_password(password, hash2) is True
