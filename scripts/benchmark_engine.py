@@ -4,6 +4,7 @@ import time
 from json_logic import jsonLogic
 
 import tempus_core
+from json_logic import jsonLogic
 
 # 1. Preparar Datos de Prueba (Simulando 10,000 Transacciones)
 NUM_TRANSACTIONS = 10000
@@ -24,14 +25,14 @@ transacciones = [
 print(f"🚀 Iniciando Benchmark de Tempus Core: {NUM_TRANSACTIONS} transacciones\n")
 
 # --- BENCHMARK 1: PYTHON PURO (json-logic original) ---
-start_time = time.perf_counter()
+start_time = perf_counter()
 python_total = 0.0
 
 for tx in transacciones:
     fee = float(jsonLogic(logica_json, tx))
     python_total += fee
 
-python_duration = time.perf_counter() - start_time
+python_duration = perf_counter() - start_time
 print("🐍 Vía Lenta (Python json-logic):")
 print(f"   -> Tiempo total: {python_duration:.4f} segundos")
 print(
@@ -40,7 +41,7 @@ print(
 
 
 # --- BENCHMARK 2: RUST NATIVO (tempus_core + PyO3) ---
-start_time = time.perf_counter()
+start_time = perf_counter()
 rust_total = 0.0
 
 # Pre-parseamos los JSON a strings para el puente FFI (como lo hace el PricingEngine real)
@@ -50,7 +51,7 @@ for tx_str in tx_strings:
     fee = tempus_core.evaluate_fee(logica_str, tx_str)
     rust_total += fee
 
-rust_duration = time.perf_counter() - start_time
+rust_duration = perf_counter() - start_time
 print("🦀 Vía Rápida Individual (Rust tempus_core):")
 print(f"   -> Tiempo total: {rust_duration:.4f} segundos")
 print(
@@ -58,13 +59,13 @@ print(
 )
 
 # --- BENCHMARK 3: RUST BATCH (Array-based FFI) ---
-start_time = time.perf_counter()
+start_time = perf_counter()
 
 # Pasamos toda la lista de strings de una sola vez
 batch_results = tempus_core.evaluate_batch(logica_str, tx_strings)
 rust_batch_total = sum(batch_results)
 
-rust_batch_duration = time.perf_counter() - start_time
+rust_batch_duration = perf_counter() - start_time
 print("🚀🚀 Vía Ultra Rápida Batch (Rust tempus_core Arrays):")
 print(f"   -> Tiempo total: {rust_batch_duration:.4f} segundos")
 print(
