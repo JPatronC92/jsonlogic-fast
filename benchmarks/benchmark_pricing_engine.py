@@ -1,12 +1,10 @@
+import statistics
 import time
 import uuid
-import statistics
+
+from src.domain.models import (PricingContextSchema, PricingRuleIdentity,
+                               PricingRuleVersion)
 from src.domain.services.pricing_engine import PricingEngine
-from src.domain.models import (
-    PricingRuleVersion,
-    PricingRuleIdentity,
-    PricingContextSchema,
-)
 
 
 def create_active_rules(num_rules=100):

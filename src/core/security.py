@@ -1,6 +1,6 @@
-import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import UUID
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -86,12 +86,34 @@ async def get_tenant_by_jwt(token: str, db: AsyncSession) -> Optional[Tenant]:
         if tenant_id_str is None:
             return None
 
-        tenant_id = uuid.UUID(tenant_id_str)
+        tenant_id = UUID(tenant_id_str)
     except (jwt.PyJWTError, ValueError):
         return None
 
     result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     return result.scalar_one_or_none()
+
+
+async def _authenticate_via_api_key(api_key: str, db: AsyncSession) -> Tenant:
+    tenant = await get_tenant_by_api_key(api_key, db)
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return tenant
+
+
+async def _authenticate_via_token(token: str, db: AsyncSession) -> Tenant:
+    tenant = await get_tenant_by_jwt(token, db)
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return tenant
 
 
 async def get_current_tenant(
@@ -103,25 +125,10 @@ async def get_current_tenant(
     Dependency that resolves the active Tenant.
     It checks for an API Key first (B2B/SDK), then falls back to JWT (Dashboard).
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    tenant = None
-
     if api_key:
-        tenant = await get_tenant_by_api_key(api_key, db)
-        if not tenant:
-            raise credentials_exception
-        return tenant
-
+        return await _authenticate_via_api_key(api_key, db)
     if token:
-        tenant = await get_tenant_by_jwt(token, db)
-        if tenant is None:
-            raise credentials_exception
-        return tenant
+        return await _authenticate_via_token(token, db)
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

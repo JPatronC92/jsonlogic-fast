@@ -1,11 +1,6 @@
 from .client import TempusClient, TempusError
-from .types import (
-    FeeBreakdown,
-    CalculateFeeResponse,
-    BatchSimulateResponse,
-    CalculateRequest,
-    BatchSimulateRequest,
-)
+from .types import (BatchSimulateRequest, BatchSimulateResponse,
+                    CalculateFeeResponse, CalculateRequest, FeeBreakdown)
 
 __all__ = [
     "TempusClient",
