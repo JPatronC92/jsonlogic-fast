@@ -7,6 +7,15 @@ from sqlalchemy.dialects.postgresql import DATERANGE, JSONB, UUID, ExcludeConstr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+import json
+from functools import lru_cache
+from jsonschema import Draft7Validator
+
+@lru_cache(maxsize=128)
+def get_cached_validator(schema_json_str: str) -> Draft7Validator:
+    """Helper function to cache Draft7Validator instances based on the JSON string."""
+    schema_dict = json.loads(schema_json_str)
+    return Draft7Validator(schema_dict)
 
 
 class Base(DeclarativeBase):
