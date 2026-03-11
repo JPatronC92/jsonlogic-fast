@@ -8,11 +8,7 @@ NUM_TRANSACTIONS = 10000
 
 # Regla de Stripe: if country == MX then amount * 0.036 else 0
 logica_json = {
-    "if": [
-        {"==": [{"var": "country"}, "MX"]},
-        {"*": [{"var": "amount"}, 0.036]},
-        0
-    ]
+    "if": [{"==": [{"var": "country"}, "MX"]}, {"*": [{"var": "amount"}, 0.036]}, 0]
 }
 
 logica_str = json.dumps(logica_json)
@@ -36,7 +32,9 @@ for tx in transacciones:
 python_duration = time.perf_counter() - start_time
 print("🐍 Vía Lenta (Python json-logic):")
 print(f"   -> Tiempo total: {python_duration:.4f} segundos")
-print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / python_duration:,.0f} req/s\n")
+print(
+    f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / python_duration:,.0f} req/s\n"
+)
 
 
 # --- BENCHMARK 2: RUST NATIVO (tempus_core + PyO3) ---
@@ -53,7 +51,9 @@ for tx_str in tx_strings:
 rust_duration = time.perf_counter() - start_time
 print("🦀 Vía Rápida Individual (Rust tempus_core):")
 print(f"   -> Tiempo total: {rust_duration:.4f} segundos")
-print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_duration:,.0f} req/s\n")
+print(
+    f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_duration:,.0f} req/s\n"
+)
 
 # --- BENCHMARK 3: RUST BATCH (Array-based FFI) ---
 start_time = time.perf_counter()
@@ -65,10 +65,14 @@ rust_batch_total = sum(batch_results)
 rust_batch_duration = time.perf_counter() - start_time
 print("🚀🚀 Vía Ultra Rápida Batch (Rust tempus_core Arrays):")
 print(f"   -> Tiempo total: {rust_batch_duration:.4f} segundos")
-print(f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_batch_duration:,.0f} req/s\n")
+print(
+    f"   -> TPS (Transacciones por segundo): {NUM_TRANSACTIONS / rust_batch_duration:,.0f} req/s\n"
+)
 
 # --- RESULTADOS ---
-assert python_total == rust_total == rust_batch_total, "Error: ¡Los motores no dieron el mismo resultado determinista!"
+assert (
+    python_total == rust_total == rust_batch_total
+), "Error: ¡Los motores no dieron el mismo resultado determinista!"
 
 if rust_batch_duration < python_duration:
     speedup = python_duration / rust_batch_duration

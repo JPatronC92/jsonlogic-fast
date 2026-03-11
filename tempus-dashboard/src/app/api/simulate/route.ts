@@ -4,13 +4,20 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.TEMPUS_API_KEY) {
+      return NextResponse.json(
+        { error: "Server configuration error: Missing API key" },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json();
 
     const response = await fetch(`${API_BASE}/api/v1/billing/batch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": process.env.TEMPUS_API_KEY || "test-api-key",
+        "X-API-Key": process.env.TEMPUS_API_KEY,
       },
       body: JSON.stringify(body),
     });

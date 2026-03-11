@@ -1,15 +1,17 @@
-import time
 from unittest.mock import patch
 from src.core.cache import SimpleTTLCache
+
 
 def test_set_and_get():
     cache = SimpleTTLCache()
     cache.set("key", "value")
     assert cache.get("key") == "value"
 
+
 def test_get_nonexistent():
     cache = SimpleTTLCache()
     assert cache.get("nonexistent") is None
+
 
 def test_expiration():
     cache = SimpleTTLCache(ttl_seconds=10)
@@ -26,6 +28,7 @@ def test_expiration():
         assert cache.get("key") is None
         assert "key" not in cache._cache
 
+
 def test_overwrite():
     cache = SimpleTTLCache(ttl_seconds=10)
     with patch("time.time") as mock_time:
@@ -39,6 +42,7 @@ def test_overwrite():
         mock_time.return_value = 1012
         assert cache.get("key") == "value2"
 
+
 def test_clear():
     cache = SimpleTTLCache()
     cache.set("k1", "v1")
@@ -47,6 +51,7 @@ def test_clear():
     assert cache.get("k1") is None
     assert cache.get("k2") is None
     assert len(cache._cache) == 0
+
 
 def test_custom_ttl():
     cache = SimpleTTLCache(ttl_seconds=60)
