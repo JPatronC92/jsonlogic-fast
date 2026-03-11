@@ -163,7 +163,10 @@ class PricingRuleVersion(Base):
         schema_id_str = str(self.schema_id)
         if schema_id_str not in PricingRuleVersion._validator_cache:
             from jsonschema import Draft7Validator
-            PricingRuleVersion._validator_cache[schema_id_str] = Draft7Validator(self.context_schema.schema_json)
+
+            PricingRuleVersion._validator_cache[schema_id_str] = Draft7Validator(
+                self.context_schema.schema_json
+            )
 
         return PricingRuleVersion._validator_cache[schema_id_str]
 
