@@ -122,6 +122,8 @@ class PricingEngine:
                 schema_id = regla_version.context_schema.id
                 if schema_id not in validated_schemas:
                     try:
+                        # ⚡ Optimización: Usamos la propiedad .validator de PricingRuleVersion (Draft7Validator cacheado)
+                        # en lugar de validate() para evitar recompilar el esquema en cada iteración.
                         regla_version.validator.validate(contexto_tx)
                         validated_schemas.add(schema_id)
                     except ValidationError as e:
