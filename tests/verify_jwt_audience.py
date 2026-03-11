@@ -1,6 +1,6 @@
-import hmac
-import hashlib
 import base64
+import hashlib
+import hmac
 import json
 
 SECRET_KEY = b"test-secret"

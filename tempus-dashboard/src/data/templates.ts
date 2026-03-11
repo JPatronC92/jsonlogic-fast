@@ -23,7 +23,7 @@ export interface PricingRule {
 // Layer 1: Dataset
 export interface Dataset {
     type: 'transaction' | 'prompt' | 'api_request' | 'customer_order' | 'subscription' | 'claim' | 'shipment';
-    data: any[];
+    data: Record<string, unknown>[];
 }
 
 // Layer 3: Presentation Profile

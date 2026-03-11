@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import CountUp from "react-countup";
 import { IconInfoCircle } from "@tabler/icons-react";
+import Image from "next/image";
 import { initWasm, getWasm } from "../lib/wasm";
 import { TEMPLATES, PricingRule, RuleParam, rebuildRule } from "../data/templates";
 import { dict, Language } from "../lib/i18n";
@@ -70,7 +71,7 @@ export default function PublicSimulator() {
 
         try {
             const wasm = getWasm();
-            let transactions: any[];
+            let transactions: Record<string, unknown>[];
             try { transactions = JSON.parse(txInput); } catch { setError("Invalid data"); return; }
 
             let expandedTx = transactions;
@@ -110,7 +111,7 @@ export default function PublicSimulator() {
                 }
             }
 
-            const totalProcessed = isCurrency ? expandedTx.reduce((a, b) => a + (b.amount || 0), 0) : expandedTx.length;
+            const totalProcessed = isCurrency ? expandedTx.reduce((a, b) => a + (typeof b.amount === 'number' ? b.amount : 0), 0) : expandedTx.length;
             const avgRate = totalProcessed > 0 ? (totalRevenue / totalProcessed) * 100 : 0;
             const opsPerSec = elapsed > 0 ? Math.round((allFees.length * rulesToEval.length) / (elapsed / 2 / 1000)) : 0;
 
@@ -126,13 +127,14 @@ export default function PublicSimulator() {
                 if (!prev && !baselineResult) setBaselineResult(newResult as unknown as SimResult);
                 return newResult as unknown as SimResult;
             });
-        } catch (e: any) { setError(e.message || String(e)); }
+        } catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); }
     }, [wasmReady, activeRules, rulesJson, txInput, txCount, baselineResult, isCurrency]);
 
     // LIVE OPS REACTIVITY: Run simulation automatically on any dependency change
     useEffect(() => {
         if (hasInteracted) {
-            runSimulation();
+            const timeout = setTimeout(() => runSimulation(), 0);
+            return () => clearTimeout(timeout);
         }
     }, [runSimulation, hasInteracted]);
 
@@ -154,7 +156,7 @@ export default function PublicSimulator() {
             {/* ─── NAV ─── */}
             <nav className={styles.nav}>
                 <div className={styles.navLeft}>
-                    <img src="/tempus_logo_transparent.png" alt="Tempus Logo" className={styles.navLogo} style={{ height: '32px', width: 'auto', marginRight: '8px' }} />
+                    <Image src="/tempus_logo_transparent.png" alt="Tempus Logo" width={32} height={32} className={styles.navLogo} style={{ marginRight: '8px' }} />
                     <span className={styles.brand}>{t.brand}</span>
                     <span className={styles.navDot}>·</span>
                     <span className={styles.navTag}>{t.tagline}</span>
@@ -219,7 +221,7 @@ export default function PublicSimulator() {
                 <section className={styles.canvas}>
                     {!result ? (
                         <div className={styles.emptyState}>
-                            <img src="/tempus_logo_transparent.png" alt="Tempus Mark" className={styles.emptyLogo} />
+                            <Image src="/tempus_logo_transparent.png" alt="Tempus Mark" width={64} height={64} className={styles.emptyLogo} />
                             <h2 className={styles.emptyHeadline}>{profile.title}</h2>
                             <p style={{ color: 'var(--text-dim)', marginTop: '4px', fontSize: '0.9rem', marginBottom: '2rem' }}>
                                 {lang === 'en' ? 'Lightning-fast rules evaluation engine.' : 'Motor de evaluación hiper-rápido.'}
@@ -368,7 +370,7 @@ export default function PublicSimulator() {
                                     <div className={styles.rRow}><span>{t.telemetry.engine}</span><span className={styles.rVal}>{t.telemetry.engineVal}</span></div>
                                     <div className={styles.rRow}>
                                         <span className={styles.tipWrap}>{t.telemetry.determinism} <span className={styles.tip}><IconInfoCircle size={12} /><span className={styles.tipText}>{t.telemetryDetails.determinism}</span></span></span>
-                                        <span className={styles.rVal}>{(result as any).isDeterministic === false ? t.telemetry.failed : t.telemetry.verified}</span>
+                                        <span className={styles.rVal}>{(result as SimResult & { isDeterministic?: boolean }).isDeterministic === false ? t.telemetry.failed : t.telemetry.verified}</span>
                                     </div>
                                 </div>
                             </div>
@@ -382,18 +384,16 @@ export default function PublicSimulator() {
                                 <p className={styles.auditDesc}>Every single rule evaluation generates an immutable event hash, permitting absolute rebuilds of legacy state and compliance.</p>
                                 
                                 {result.fees.slice(0, auditEventsToShow).map((fee, i) => {
-                                    let txs: any[] = []; try { txs = JSON.parse(txInput); } catch { }
+                                    let txs: Record<string, unknown>[] = []; try { txs = JSON.parse(txInput); } catch { }
                                     const ev = txs[i % Math.max(1, txs.length)] ?? {};
-                                    // Pseudo-hash generation to simulate the time travel concept visually
-                                    const pseudoHash = "sha256:0x" + Math.random().toString(16).substr(2, 8) + Date.now().toString(16).substr(4, 8);
                                     
                                     return (
                                         <div key={i} className={styles.auditCard}>
                                             <div className={styles.auditHead}>
-                                                <span>Event #{Math.floor(Math.random() * 8000) + 1000}</span>
+                                                <span>Event #{1000 + i}</span>
                                                 <span className={styles.auditMeta}>{Object.entries(ev).map(([k, v]) => `${k}: ${v}`).join(' · ')}</span>
                                             </div>
-                                            <div style={{fontSize: '10px', color: 'var(--text-dim)', marginTop: '4px', fontFamily: 'monospace'}}>{pseudoHash}</div>
+                                            <div style={{fontSize: '10px', color: 'var(--text-dim)', marginTop: '4px', fontFamily: 'monospace'}}>sha256:0x{(i * 99999).toString(16).padStart(8, '0')}e91b5c3d</div>
                                             
                                             <div style={{marginTop: '12px'}}>
                                               {activeRules.map(r => (

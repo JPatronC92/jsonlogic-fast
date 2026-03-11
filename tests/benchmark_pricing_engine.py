@@ -1,12 +1,10 @@
 import time
 import uuid
-import json
+
+from src.domain.models import (PricingContextSchema, PricingRuleIdentity,
+                               PricingRuleVersion)
 from src.domain.services.pricing_engine import PricingEngine
-from src.domain.models import (
-    PricingRuleVersion,
-    PricingRuleIdentity,
-    PricingContextSchema,
-)
+
 
 def benchmark():
     schema_json = {
@@ -18,7 +16,7 @@ def benchmark():
             "user_id": {"type": "string"},
             "is_prime": {"type": "boolean"},
         },
-        "required": ["amount", "country", "currency"]
+        "required": ["amount", "country", "currency"],
     }
 
     schema = PricingContextSchema(
@@ -40,7 +38,13 @@ def benchmark():
         reglas_activas.append(rv)
 
     engine = PricingEngine()
-    context = {"amount": 1000.00, "country": "MX", "currency": "MXN", "user_id": "user_123", "is_prime": True}
+    context = {
+        "amount": 1000.00,
+        "country": "MX",
+        "currency": "MXN",
+        "user_id": "user_123",
+        "is_prime": True,
+    }
 
     # Warm up
     for _ in range(5):
@@ -55,8 +59,11 @@ def benchmark():
 
     total_time = end - start
     avg_time = total_time / iterations
-    print(f"Total time for {iterations} iterations with {len(reglas_activas)} rules: {total_time:.4f}s")
+    print(
+        f"Total time for {iterations} iterations with {len(reglas_activas)} rules: {total_time:.4f}s"
+    )
     print(f"Average time per calculate call: {avg_time * 1000:.4f}ms")
+
 
 if __name__ == "__main__":
     benchmark()

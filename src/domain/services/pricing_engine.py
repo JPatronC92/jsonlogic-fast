@@ -1,15 +1,14 @@
-import logging
 import hashlib
 import json
-from typing import Dict, Any, List
+import logging
+from typing import Any, Dict, List
+
 from json_logic import jsonLogic
 from jsonschema import ValidationError
-from src.domain.schemas.pricing import (
-    CalculateFeeResponse,
-    FeeBreakdown,
-    BatchSimulateResponse,
-)
+
 from src.domain.models import PricingRuleVersion
+from src.domain.schemas.pricing import (BatchSimulateResponse,
+                                        CalculateFeeResponse, FeeBreakdown)
 
 try:
     import tempus_core
@@ -60,7 +59,9 @@ class PricingEngine:
                 fees_por_tx = [0.0] * local_success_count
 
                 for regla_version in reglas_activas:
-                    batch_fees = tempus_core.evaluate_batch(regla_version.logica_json_str, valid_tx_strings)
+                    batch_fees = tempus_core.evaluate_batch(
+                        regla_version.logica_json_str, valid_tx_strings
+                    )
                     for i, fee in enumerate(batch_fees):
                         fees_por_tx[i] += fee
 

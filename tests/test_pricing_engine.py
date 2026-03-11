@@ -1,11 +1,10 @@
-import pytest
-from src.domain.services.pricing_engine import PricingEngine
-from src.domain.models import (
-    PricingRuleVersion,
-    PricingRuleIdentity,
-    PricingContextSchema,
-)
 import uuid
+
+import pytest
+
+from src.domain.models import (PricingContextSchema, PricingRuleIdentity,
+                               PricingRuleVersion)
+from src.domain.services.pricing_engine import PricingEngine
 
 
 @pytest.fixture

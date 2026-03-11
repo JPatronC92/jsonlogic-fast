@@ -1,15 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends
-from src.interfaces.api.dependencies import SessionDep
+from fastapi import APIRouter, Depends, HTTPException
+
 from src.core.security import get_current_tenant
 from src.domain.models import Tenant
-from src.infrastructure.repository import PricingRepository
+from src.domain.schemas.pricing import (BatchSimulateRequest,
+                                        BatchSimulateResponse,
+                                        CalculateFeeRequest,
+                                        CalculateFeeResponse)
 from src.domain.services.pricing_engine import PricingEngine
-from src.domain.schemas.pricing import (
-    CalculateFeeRequest,
-    CalculateFeeResponse,
-    BatchSimulateRequest,
-    BatchSimulateResponse,
-)
+from src.infrastructure.repository import PricingRepository
+from src.interfaces.api.dependencies import SessionDep
 
 router = APIRouter()
 engine = PricingEngine()

@@ -1,13 +1,13 @@
 import uuid as uuid_pkg
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, ForeignKey, Integer, DateTime, Boolean
-from sqlalchemy.dialects.postgresql import UUID, JSONB, DATERANGE
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, event
+from sqlalchemy.dialects.postgresql import (DATERANGE, JSONB, UUID,
+                                            ExcludeConstraint)
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-from sqlalchemy import event
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.dialects.postgresql import ExcludeConstraint
 
 
 class Base(DeclarativeBase):
@@ -149,13 +149,6 @@ class PricingRuleVersion(Base):
     rule = relationship("PricingRuleIdentity", back_populates="versiones")
     context_schema = relationship("PricingContextSchema")
 
-    @property
-    def logica_json_str(self) -> str:
-        """Cachea la representación en string del json-logic para optimización."""
-        if not hasattr(self, "_cached_logica_str"):
-            import json
-            self._cached_logica_str = json.dumps(self.logica_json)
-        return self._cached_logica_str
     # Mapped for internal JSON string cache
     __allow_unmapped__ = True
     _logica_json_str: Optional[str] = None
@@ -165,13 +158,16 @@ class PricingRuleVersion(Base):
     def validator(self):
         if self._validator is None:
             from jsonschema import Draft7Validator
+
             self._validator = Draft7Validator(self.context_schema.schema_json)
         return self._validator
 
     @property
     def logica_json_str(self) -> str:
+        """Cachea la representación en string del json-logic para optimización."""
         if self._logica_json_str is None:
             import json
+
             self._logica_json_str = json.dumps(self.logica_json)
         return self._logica_json_str
 

@@ -1,8 +1,11 @@
 from datetime import date
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from src.domain.models import PricingScheme, PricingRuleIdentity, PricingRuleVersion
+
+from src.domain.models import (PricingRuleIdentity, PricingRuleVersion,
+                               PricingScheme)
 
 
 class PricingRepository:
