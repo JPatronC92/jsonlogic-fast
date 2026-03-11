@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List
+
+from pydantic import BaseModel, Field
 
 
 class FeeBreakdown(BaseModel):
@@ -39,7 +40,7 @@ class BatchSimulateRequest(BaseModel):
     scheme_urn: str = Field(..., description="El identificador del esquema de precios.")
     execution_date: datetime = Field(..., description="Fecha histórica a simular.")
     transactions: List[Dict[str, Any]] = Field(
-        ..., description="Lista de transacciones a procesar (Lote)."
+        ..., max_length=1000, description="Lista de transacciones a procesar (Lote)."
     )
 
 
