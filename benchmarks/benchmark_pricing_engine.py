@@ -34,6 +34,7 @@ def create_active_rules(num_rules=100):
 
 def run_benchmark():
     engine = PricingEngine()
+    # Baseline rules
     rules = create_active_rules(100)
     context = {"amount": 1000.00, "country": "MX", "currency": "MXN"}
 
@@ -45,8 +46,10 @@ def run_benchmark():
     times = []
 
     for _ in range(iterations):
+        # Create fresh instances to simulate real per-request behavior
+        fresh_rules = create_active_rules(100)
         start = time.perf_counter()
-        engine.calculate(context, rules)
+        engine.calculate(context, fresh_rules)
         end = time.perf_counter()
         times.append(end - start)
 
