@@ -3,8 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, event
-from sqlalchemy.dialects.postgresql import (DATERANGE, JSONB, UUID,
-                                            ExcludeConstraint)
+from sqlalchemy.dialects.postgresql import DATERANGE, JSONB, UUID, ExcludeConstraint
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -156,11 +155,17 @@ class PricingRuleVersion(Base):
 
     @property
     def validator(self):
-        if self._validator is None:
-            from jsonschema import Draft7Validator
+        # We cache the validator globally by schema ID to avoid redundant compilations
+        # across multiple requests/instances.
+        if getattr(PricingRuleVersion, "_validator_cache", None) is None:
+            PricingRuleVersion._validator_cache = {}
 
-            self._validator = Draft7Validator(self.context_schema.schema_json)
-        return self._validator
+        schema_id_str = str(self.schema_id)
+        if schema_id_str not in PricingRuleVersion._validator_cache:
+            from jsonschema import Draft7Validator
+            PricingRuleVersion._validator_cache[schema_id_str] = Draft7Validator(self.context_schema.schema_json)
+
+        return PricingRuleVersion._validator_cache[schema_id_str]
 
     @property
     def logica_json_str(self) -> str:

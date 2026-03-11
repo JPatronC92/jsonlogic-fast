@@ -7,8 +7,11 @@ from json_logic import jsonLogic
 from jsonschema import ValidationError
 
 from src.domain.models import PricingRuleVersion
-from src.domain.schemas.pricing import (BatchSimulateResponse,
-                                        CalculateFeeResponse, FeeBreakdown)
+from src.domain.schemas.pricing import (
+    BatchSimulateResponse,
+    CalculateFeeResponse,
+    FeeBreakdown,
+)
 
 try:
     import tempus_core
@@ -119,6 +122,8 @@ class PricingEngine:
                 schema_id = regla_version.context_schema.id
                 if schema_id not in validated_schemas:
                     try:
+                        # ⚡ Optimización: Usamos la propiedad .validator de PricingRuleVersion (Draft7Validator cacheado)
+                        # en lugar de validate() para evitar recompilar el esquema en cada iteración.
                         regla_version.validator.validate(contexto_tx)
                         validated_schemas.add(schema_id)
                     except ValidationError as e:
@@ -154,7 +159,6 @@ class PricingEngine:
                     try:
                         # 🦀 Vía Rápida (Rust Native)
                         rule_str = regla_version.logica_json_str
-                        ctx_str = json.dumps(contexto_tx)
                         fee_amount = tempus_core.evaluate_fee(rule_str, ctx_str)
                     except Exception as rust_err:
                         logger.warning(

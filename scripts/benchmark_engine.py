@@ -1,5 +1,7 @@
 import json
-from time import perf_counter
+import time
+
+from json_logic import jsonLogic
 
 import tempus_core
 from json_logic import jsonLogic

@@ -7,8 +7,12 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from src.core.security import get_current_tenant
-from src.domain.models import (PricingRuleIdentity, PricingRuleVersion,
-                               PricingScheme, Tenant)
+from src.domain.models import (
+    PricingRuleIdentity,
+    PricingRuleVersion,
+    PricingScheme,
+    Tenant,
+)
 from src.interfaces.api.dependencies import SessionDep
 
 router = APIRouter()
