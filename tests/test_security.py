@@ -1,19 +1,24 @@
-import uuid
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import jwt
 import pytest
 from fastapi import HTTPException
 
-from src.core.security import (ALGORITHM, create_access_token,
-                               get_current_tenant, get_password_hash, settings,
-                               verify_password)
+from src.core.security import (
+    ALGORITHM,
+    create_access_token,
+    get_current_tenant,
+    get_password_hash,
+    settings,
+    verify_password,
+)
 
 
 @pytest.mark.asyncio
 async def test_get_current_tenant_valid_token():
     # Setup
-    tenant_id = uuid.uuid4()
+    tenant_id = uuid4()
     token = create_access_token({"sub": str(tenant_id)})
 
     # Mock DB session
@@ -38,7 +43,7 @@ async def test_get_current_tenant_valid_token():
 @pytest.mark.asyncio
 async def test_get_current_tenant_invalid_audience():
     # Setup token with wrong audience
-    tenant_id = uuid.uuid4()
+    tenant_id = uuid4()
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode = {"sub": str(tenant_id), "exp": expire, "aud": "wrong-audience"}
     token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
