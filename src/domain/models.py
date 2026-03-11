@@ -164,10 +164,20 @@ class PricingRuleVersion(Base):
 
     @property
     def validator(self):
-        # Cache jsonschema.Draft7Validator compilation using a module-level lru_cache
-        # on a helper function that takes a JSON-serialized schema string.
-        schema_str = json.dumps(self.context_schema.schema_json, sort_keys=True)
-        return get_cached_validator(schema_str)
+        # We cache the validator globally by schema ID to avoid redundant compilations
+        # across multiple requests/instances.
+        if getattr(PricingRuleVersion, "_validator_cache", None) is None:
+            PricingRuleVersion._validator_cache = {}
+
+        schema_id_str = str(self.schema_id)
+        if schema_id_str not in PricingRuleVersion._validator_cache:
+            from jsonschema import Draft7Validator
+
+            PricingRuleVersion._validator_cache[schema_id_str] = Draft7Validator(
+                self.context_schema.schema_json
+            )
+
+        return PricingRuleVersion._validator_cache[schema_id_str]
 
     @property
     def logica_json_str(self) -> str:
