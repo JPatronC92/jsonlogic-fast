@@ -1,8 +1,11 @@
 import time
 import uuid
 
-from src.domain.models import (PricingContextSchema, PricingRuleIdentity,
-                               PricingRuleVersion)
+from src.domain.models import (
+    PricingContextSchema,
+    PricingRuleIdentity,
+    PricingRuleVersion,
+)
 from src.domain.services.pricing_engine import PricingEngine
 
 
