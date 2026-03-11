@@ -1,6 +1,6 @@
-import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import UUID
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -90,7 +90,7 @@ async def get_tenant_by_jwt(token: str, db: AsyncSession) -> Optional[Tenant]:
         if tenant_id_str is None:
             return None
 
-        tenant_id = uuid.UUID(tenant_id_str)
+        tenant_id = UUID(tenant_id_str)
     except (jwt.PyJWTError, ValueError):
         return None
 
