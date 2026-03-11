@@ -149,6 +149,13 @@ class PricingRuleVersion(Base):
     rule = relationship("PricingRuleIdentity", back_populates="versiones")
     context_schema = relationship("PricingContextSchema")
 
+    @property
+    def logica_json_str(self) -> str:
+        """Cachea la representación en string del json-logic para optimización."""
+        if not hasattr(self, "_cached_logica_str"):
+            import json
+            self._cached_logica_str = json.dumps(self.logica_json)
+        return self._cached_logica_str
     # Mapped for internal JSON string cache
     __allow_unmapped__ = True
     _logica_json_str: Optional[str] = None
