@@ -22,7 +22,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "bcrypt>=5.0.0",
+    "bcrypt<4.0.0",
     "black>=26.1.0",
     "httpx>=0.28.1",
     "isort>=8.0.0",
