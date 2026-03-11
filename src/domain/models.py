@@ -152,6 +152,14 @@ class PricingRuleVersion(Base):
     # Mapped for internal JSON string cache
     __allow_unmapped__ = True
     _logica_json_str: Optional[str] = None
+    _validator: Optional[object] = None
+
+    @property
+    def validator(self):
+        if self._validator is None:
+            from jsonschema import Draft7Validator
+            self._validator = Draft7Validator(self.context_schema.schema_json)
+        return self._validator
 
     @property
     def logica_json_str(self) -> str:

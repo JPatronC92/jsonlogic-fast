@@ -3,7 +3,7 @@ import hashlib
 import json
 from typing import Dict, Any, List
 from json_logic import jsonLogic
-from jsonschema import validate, ValidationError
+from jsonschema import ValidationError
 from src.domain.schemas.pricing import (
     CalculateFeeResponse,
     FeeBreakdown,
@@ -110,22 +110,23 @@ class PricingEngine:
         self, contexto_tx: Dict[str, Any], reglas_activas: List[PricingRuleVersion]
     ) -> CalculateFeeResponse:
         calculated_fees = []
+        validated_schemas = set()
 
         # 1. Validación de Esquema (Barrera Defensiva)
         for regla_version in reglas_activas:
             if regla_version.context_schema:
-                try:
-                    validate(
-                        instance=contexto_tx,
-                        schema=regla_version.context_schema.schema_json,
-                    )
-                except ValidationError as e:
-                    logger.error(
-                        f"Contexto inválido para regla {regla_version.rule.name}: {e.message}"
-                    )
-                    raise ValueError(
-                        f"Payload malformado para {regla_version.rule.name}: {e.message}"
-                    )
+                schema_id = regla_version.context_schema.id
+                if schema_id not in validated_schemas:
+                    try:
+                        regla_version.validator.validate(contexto_tx)
+                        validated_schemas.add(schema_id)
+                    except ValidationError as e:
+                        logger.error(
+                            f"Contexto inválido para regla {regla_version.rule.name}: {e.message}"
+                        )
+                        raise ValueError(
+                            f"Payload malformado para {regla_version.rule.name}: {e.message}"
+                        )
 
         # 2. Extracción Segura
         try:
