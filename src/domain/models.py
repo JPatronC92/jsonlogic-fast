@@ -3,8 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, event
-from sqlalchemy.dialects.postgresql import (DATERANGE, JSONB, UUID,
-                                            ExcludeConstraint)
+from sqlalchemy.dialects.postgresql import DATERANGE, JSONB, UUID, ExcludeConstraint
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func

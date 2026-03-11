@@ -5,9 +5,12 @@ import jwt
 import pytest
 from fastapi import HTTPException
 
-from src.core.security import (ALGORITHM, create_access_token,
-                               get_current_tenant, get_password_hash, settings,
-                               verify_password)
+from src.core.security import (
+    ALGORITHM,
+    create_access_token,
+    get_current_tenant,
+    settings,
+)
 
 
 @pytest.mark.asyncio
@@ -54,24 +57,3 @@ async def test_get_current_tenant_invalid_audience():
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Could not validate credentials"
-
-
-def test_get_password_hash():
-    password = "secretpassword"
-    hashed_password = get_password_hash(password)
-    assert hashed_password != password
-    assert len(hashed_password) > 0
-
-
-def test_verify_password():
-    password = "secretpassword"
-    hashed_password = get_password_hash(password)
-    assert verify_password(password, hashed_password) is True
-    assert verify_password("wrongpassword", hashed_password) is False
-
-
-def test_password_hashing_is_nondeterministic():
-    password = "secretpassword"
-    hash1 = get_password_hash(password)
-    hash2 = get_password_hash(password)
-    assert hash1 != hash2

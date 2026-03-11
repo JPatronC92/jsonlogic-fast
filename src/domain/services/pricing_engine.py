@@ -7,8 +7,11 @@ from json_logic import jsonLogic
 from jsonschema import ValidationError
 
 from src.domain.models import PricingRuleVersion
-from src.domain.schemas.pricing import (BatchSimulateResponse,
-                                        CalculateFeeResponse, FeeBreakdown)
+from src.domain.schemas.pricing import (
+    BatchSimulateResponse,
+    CalculateFeeResponse,
+    FeeBreakdown,
+)
 
 try:
     import tempus_core
