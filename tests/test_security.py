@@ -9,6 +9,7 @@ from src.core.security import (
     ALGORITHM,
     create_access_token,
     get_current_tenant,
+    get_password_hash,
     settings,
 )
 

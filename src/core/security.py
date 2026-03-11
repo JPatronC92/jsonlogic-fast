@@ -8,6 +8,7 @@ from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from passlib.context import CryptContext
 
 from src.core.config import get_settings
 from src.domain.models import APIKey, Tenant
@@ -26,6 +27,8 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 ALGORITHM = "HS256"
 # In a real app, this should be longer or have refresh tokens
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_password_hash(password):

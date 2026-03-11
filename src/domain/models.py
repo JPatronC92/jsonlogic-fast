@@ -7,6 +7,15 @@ from sqlalchemy.dialects.postgresql import DATERANGE, JSONB, UUID, ExcludeConstr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+import json
+from functools import lru_cache
+from jsonschema import Draft7Validator
+
+@lru_cache(maxsize=128)
+def get_cached_validator(schema_json_str: str) -> Draft7Validator:
+    """Helper function to cache Draft7Validator instances based on the JSON string."""
+    schema_dict = json.loads(schema_json_str)
+    return Draft7Validator(schema_dict)
 
 
 class Base(DeclarativeBase):
@@ -155,17 +164,10 @@ class PricingRuleVersion(Base):
 
     @property
     def validator(self):
-        # We cache the validator globally by schema ID to avoid redundant compilations
-        # across multiple requests/instances.
-        if getattr(PricingRuleVersion, "_validator_cache", None) is None:
-            PricingRuleVersion._validator_cache = {}
-
-        schema_id_str = str(self.schema_id)
-        if schema_id_str not in PricingRuleVersion._validator_cache:
-            from jsonschema import Draft7Validator
-            PricingRuleVersion._validator_cache[schema_id_str] = Draft7Validator(self.context_schema.schema_json)
-
-        return PricingRuleVersion._validator_cache[schema_id_str]
+        # Cache jsonschema.Draft7Validator compilation using a module-level lru_cache
+        # on a helper function that takes a JSON-serialized schema string.
+        schema_str = json.dumps(self.context_schema.schema_json, sort_keys=True)
+        return get_cached_validator(schema_str)
 
     @property
     def logica_json_str(self) -> str:
