@@ -5,7 +5,6 @@ from uuid import UUID
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -15,8 +14,6 @@ from src.domain.models import APIKey, Tenant
 from src.infrastructure.database import get_db
 
 settings = get_settings()
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Para el dashboard y UI
 oauth2_scheme = OAuth2PasswordBearer(
