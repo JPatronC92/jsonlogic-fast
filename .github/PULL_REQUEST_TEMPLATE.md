@@ -10,32 +10,38 @@
 - [ ] Performance improvement
 - [ ] Code refactoring
 - [ ] Dependencies update
+- [ ] Test-only change
 
 ## Testing
-<!-- Describe the tests you ran -->
-- [ ] Unit tests pass (`uv run pytest`)
-- [ ] Rust tests pass (`cd tempus_core && cargo test`)
-- [ ] Integration tests pass
-- [ ] Manual testing performed
+<!-- Describe the tests you ran and paste the exact commands -->
+- [ ] Unit tests pass (`make test` or `uv run pytest`)
+- [ ] Lint checks pass (`make lint`)
+- [ ] Rust checks pass (`make rust-check`) (if applicable)
+- [ ] Integration tests/manual validation performed (if applicable)
+
+Commands executed:
+```bash
+# paste commands here
+```
+
+## API / Contract impact
+- [ ] No API contract changes
+- [ ] API routes/payloads changed and docs were updated
+- [ ] Breaking API change documented
 
 ## Checklist
 - [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
+- [ ] I performed a self-review
+- [ ] I added/updated tests proving my change
+- [ ] I updated docs/README when behavior changed
+- [ ] My changes introduce no known secrets/sensitive data
+- [ ] CI should pass with this PR
 
-## Performance Impact
-<!-- If applicable, describe any performance implications -->
-- [ ] Benchmarked (include results)
-- [ ] No significant performance impact expected
-
-## Screenshots (if applicable)
+## Risk & Rollback
+- **Risk level:** Low / Medium / High
+- **Rollback plan:**
 
 ## Related Issues
-<!-- Link to related issues -->
 Fixes #(issue number)
 
 ## Additional Context

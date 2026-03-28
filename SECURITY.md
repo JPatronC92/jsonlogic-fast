@@ -8,47 +8,51 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Tempus Engine, please report it responsibly:
+If you discover a security vulnerability in Tempus Engine, please report it responsibly.
 
 **Please do NOT disclose security issues publicly via GitHub issues.**
 
-Instead, report via:
-
+Report through one of these channels:
 1. **Email**: security@tempus-engine.dev (preferred)
-2. **GitHub Security Advisories**: Use the "Report a vulnerability" feature on our repository
+2. **GitHub Security Advisories**: use the "Report a vulnerability" feature
 
 ## What to Include
 
-When reporting a vulnerability, please include:
+- **Description**: clear description of the issue
+- **Impact**: what an attacker can do
+- **Reproduction steps**: deterministic steps or PoC
+- **Environment**: version, OS, configuration
+- **Proposed fix** (optional)
 
-- **Description**: Clear description of the vulnerability
-- **Impact**: What could an attacker do?
-- **Reproduction steps**: How to trigger the vulnerability
-- **Environment**: Version, OS, configuration
-- **Possible fix**: If you have suggestions
+## Response & Remediation SLA
 
-## Response Timeline
+- **Acknowledgment**: within **48 hours**
+- **Triage and severity assignment**: within **5 business days**
+- **Status updates**: at least every **7 calendar days** while open
 
-- **Acknowledgment**: Within 48 hours
-- **Initial assessment**: Within 5 business days
-- **Fix timeline**: Based on severity
-  - Critical: 7 days
-  - High: 30 days
-  - Medium: 90 days
+Target remediation windows:
+- **Critical**: 7 days
+- **High**: 30 days
+- **Medium**: 90 days
+- **Low**: next scheduled release (or earlier)
+
+## Disclosure Policy
+
+- We follow coordinated disclosure.
+- We will publish a security advisory after a fix is available, with mitigation guidance.
+- We will credit reporters who want to be acknowledged.
 
 ## Security Best Practices
 
-When deploying Tempus Engine:
-
 ### API Keys
-- Store API keys securely (use secret managers)
+- Store API keys in a secret manager
 - Rotate keys regularly
 - Never commit keys to version control
 
 ### Database
 - Use strong PostgreSQL passwords
 - Enable SSL/TLS for database connections
-- Regular backups with encryption
+- Maintain encrypted backups
 
 ### Network
 - Run behind a reverse proxy (nginx/traefik)
@@ -62,37 +66,32 @@ SECRET_KEY="hardcoded-secret"
 
 # Do this instead:
 SECRET_KEY=$(openssl rand -hex 32)
-# Store in environment or secret manager
 ```
 
 ## Security Features
 
 Tempus Engine implements:
-
-- **API Key authentication** with per-tenant isolation
-- **Cryptographic hashing** of pricing rules (SHA-256)
-- **Immutable audit trail** via PostgreSQL constraints
-- **Input validation** via JSON Schema
-- **Time-range constraints** preventing overlapping rule versions
+- API Key authentication with tenant isolation
+- Cryptographic hashing of pricing rules (SHA-256)
+- Immutable audit trail via PostgreSQL constraints
+- Input validation via JSON Schema
+- Time-range constraints preventing overlapping rule versions
 
 ## Third-Party Dependencies
 
-We monitor dependencies for security vulnerabilities:
+We monitor dependencies for known vulnerabilities:
 
 ```bash
-# Check for known vulnerabilities
 uv run pip-audit
-
-# In Rust
 cd tempus_core && cargo audit
 ```
 
 ## Hall of Fame
 
-We thank the following security researchers who have responsibly disclosed vulnerabilities:
+We thank security researchers who responsibly disclose vulnerabilities.
 
-*None yet - be the first!*
+*None yet — be the first!*
 
 ---
 
-Thank you for helping keep Tempus Engine secure!
+Thank you for helping keep Tempus Engine secure.
