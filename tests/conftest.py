@@ -1,8 +1,16 @@
+import os
 from typing import AsyncGenerator
 
 import pytest
-from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+# Test-safe defaults so Settings can be instantiated in clean environments.
+os.environ.setdefault("POSTGRES_USER", "postgres")
+os.environ.setdefault("POSTGRES_PASSWORD", "password")
+os.environ.setdefault("POSTGRES_SERVER", "localhost")
+os.environ.setdefault("POSTGRES_DB", "tempus_db")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-32-characters")
+os.environ.setdefault("ENVIRONMENT", "test")
 
 from src.core.config import get_settings
 from src.domain.models import Base

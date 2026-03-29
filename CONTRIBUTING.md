@@ -1,77 +1,103 @@
 # Contributing to Tempus Engine
 
-First off, thank you for considering contributing to Tempus Engine! It's people like you that make this project a great tool for the community.
+First off, thank you for considering contributing to Tempus Engine.
 
 ## Code of Conduct
 
 This project and everyone participating in it is governed by our code of conduct: be respectful, be constructive, and help others learn.
 
-## How Can I Contribute?
-
-### Reporting Bugs
-
-Before creating bug reports, please check the existing issues to avoid duplicates. When you create a bug report, please include:
-
-- **Clear title and description**
-- **Steps to reproduce**
-- **Expected behavior vs actual behavior**
-- **Environment details**: OS, Python version, Rust version, PostgreSQL version
-- **Logs or error messages**
-
-### Suggesting Enhancements
-
-Enhancement suggestions are tracked as GitHub issues. Please provide:
-
-- **Clear use case**: What problem does this solve?
-- **Detailed description**: How would it work?
-- **Alternatives considered**: What else did you try?
-
-### Pull Requests
-
-1. Fork the repository
-2. Create a new branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Run tests: `uv run pytest`
-5. Format code: `uv run black src tests && uv run isort src tests`
-6. Commit with clear messages
-7. Push to your fork
-8. Open a Pull Request
-
-## Development Setup
+## Quick Start for Contributors
 
 ### Prerequisites
-
 - Python 3.12+
 - Rust 1.75+
 - PostgreSQL 16+
 - [uv](https://docs.astral.sh/uv/)
-- [maturin](https://www.maturin.rs/) (for Rust builds)
+- [maturin](https://www.maturin.rs/)
+- Docker (for local DB)
 
-### Local Development
+### One-time setup
 
 ```bash
-# Clone your fork
 git clone https://github.com/your-username/tempus-engine.git
 cd tempus-engine
+make setup
+make db-up
+cp .env.example .env
+make migrate
+```
 
-# Install dependencies
-uv sync
+### Daily development loop
 
-# Build Rust extension
-cd tempus_core
-maturin develop --release
-cd ..
+```bash
+# 1) Create a branch
+#    feat/<short-name> | fix/<short-name> | docs/<short-name> | chore/<short-name> | test/<short-name>
 
-# Set up database
-docker compose up db -d
-alembic upgrade head
+# 2) Run local quality gate
+make ci-local
 
-# Run tests
-uv run pytest
-
-# Start development server
+# 3) Run API locally
 uv run uvicorn src.interfaces.api.main:app --reload
 ```
+
+## Branch Naming Convention
+
+Use one of the following prefixes:
+- `feat/` for new functionality
+- `fix/` for bug fixes
+- `docs/` for documentation changes
+- `chore/` for maintenance work
+- `refactor/` for internal restructuring
+- `test/` for test-only improvements
+
+Examples:
+- `fix/security-import-dedup`
+- `docs/api-endpoint-alignment`
+- `test/auth-precedence-cases`
+
+## Pull Requests
+
+1. Fork the repository
+2. Create a branch following the naming convention above
+3. Make your changes
+4. Run quality checks locally:
+   ```bash
+   make lint
+   make test
+   ```
+5. If touching Rust core, run:
+   ```bash
+   make rust-check
+   ```
+6. Update docs if behavior or API contract changed
+7. Commit with clear message in imperative mood
+8. Open a Pull Request using the template
+
+## What reviewers will check
+
+- Correctness and readability
+- Test coverage for new behavior
+- Backward compatibility (or explicit breaking-change note)
+- Documentation updates when routes/contracts/config changed
+- No secrets or sensitive data introduced
+
+## How Can I Contribute?
+
+### Reporting Bugs
+
+Before creating bug reports, please check existing issues to avoid duplicates. Include:
+- Clear title and description
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (OS, Python, Rust, PostgreSQL)
+- Relevant logs (redacted)
+
+### Suggesting Enhancements
+
+Enhancement suggestions are tracked as GitHub issues. Include:
+- Use case and problem statement
+- Proposed solution
+- Alternatives considered
 
 ## Project Structure
 
@@ -79,10 +105,10 @@ uv run uvicorn src.interfaces.api.main:app --reload
 tempus-engine/
 ├── tempus_core/          # Rust core (JSON-Logic engine)
 ├── src/                  # Python FastAPI application
-│   ├── core/            # Config, security, utilities
-│   ├── domain/          # Business logic and models
-│   ├── infrastructure/  # Database and repositories
-│   └── interfaces/      # API routers and dependencies
+│   ├── core/             # Config, security, utilities
+│   ├── domain/           # Business logic and models
+│   ├── infrastructure/   # Database and repositories
+│   └── interfaces/       # API routers and dependencies
 ├── tempus-python/        # Python SDK
 ├── tempus-node/          # Node.js SDK
 ├── tempus_wasm/          # WebAssembly module
@@ -93,85 +119,53 @@ tempus-engine/
 ## Coding Standards
 
 ### Python
-
 - Follow PEP 8
 - Use type hints
-- Maximum line length: 88 (Black default)
-- Format with Black, sort imports with isort
-
-```bash
-uv run black src tests
-uv run isort src tests
-uv run ruff check src tests
-```
+- Max line length: 88
+- Required checks:
+  ```bash
+  make lint
+  ```
 
 ### Rust
-
-- Follow Rust naming conventions
-- Use `cargo fmt` and `cargo clippy`
+- Use `cargo fmt`, `cargo clippy`, and `cargo test`
 - Document public APIs with rustdoc
-
-```bash
-cd tempus_core
-cargo fmt
-cargo clippy -- -D warnings
-cargo doc
-```
-
-### Commit Messages
-
-- Use present tense: "Add feature" not "Added feature"
-- Use imperative mood: "Move cursor to..." not "Moves cursor to..."
-- Reference issues: "Fixes #123"
+- Required checks:
+  ```bash
+  make rust-check
+  ```
 
 ## Testing
 
-All contributions should include tests:
-
 ```bash
-# Run all tests
-uv run pytest
+# Full suite
+make test
 
-# Run with coverage
-uv run pytest --cov=src --cov-report=html
-
-# Run specific test
-uv run pytest tests/test_pricing_engine.py::test_calculate_fee -v
+# Focused checks
+make test-fast
 ```
 
-### Writing Tests
-
-- Use pytest fixtures for database setup
-- Test both Rust and Python paths
-- Include edge cases and error conditions
-- For batch operations, test with realistic data sizes
+When adding a change:
+- Add or update tests for the modified behavior
+- Cover happy path + failure path
+- Prefer deterministic fixtures
 
 ## Documentation
 
-- Update README.md if adding features
-- Add docstrings to new functions/classes
-- Update relevant files in `docs/`
-- Add examples for new features
-
-## Performance Considerations
-
-When contributing performance-critical code:
-
-1. Include benchmarks in `benchmarks/`
-2. Compare against baseline: `cargo bench` or `python benchmarks/benchmark_engine.py`
-3. Document performance characteristics
+Update docs whenever you change:
+- API routes or payloads
+- Security/auth behavior
+- Environment variables
+- CLI/setup commands
 
 ## Security
 
 - Never commit secrets or credentials
-- Report security issues privately (see SECURITY.md)
-- Follow OWASP guidelines for web security
+- Report vulnerabilities privately (see `SECURITY.md`)
+- Prefer least-privilege defaults
 
 ## Questions?
 
-Feel free to:
-- Open an issue for questions
-- Join our Discord (coming soon)
-- Email: tempus-engine@example.com
+Open an issue with the `question` label and enough context.
 
-Thank you for contributing! 🎉
+Thanks again for contributing! 🎉
