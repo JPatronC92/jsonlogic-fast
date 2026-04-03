@@ -1,7 +1,3 @@
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
-use pyo3::types::PyAny;
-use pythonize::pythonize;
 use ::jsonlogic_fast::{
     evaluate as core_evaluate, evaluate_batch as core_evaluate_batch,
     evaluate_batch_detailed as core_evaluate_batch_detailed,
@@ -10,6 +6,10 @@ use ::jsonlogic_fast::{
     evaluate_numeric as core_evaluate_numeric, get_core_info as core_get_core_info,
     serialize as core_serialize, validate_rule as core_validate_rule,
 };
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use pyo3::types::PyAny;
+use pythonize::pythonize;
 
 fn py_value_error(message: impl Into<String>) -> PyErr {
     PyValueError::new_err(message.into())
