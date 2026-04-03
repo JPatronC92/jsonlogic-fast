@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "jsonlogic-fast"
+version = "0.1.0"
+description = "Fast, embeddable, cross-runtime JSON-Logic evaluation for Python"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT OR Apache-2.0" }
+authors = [{ name = "JPatronC92" }]
+keywords = ["json-logic", "rules", "engine", "deterministic"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Rust",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+]
+
+[tool.maturin]
+module-name = "jsonlogic_fast"
+bindings = "pyo3"

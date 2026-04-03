@@ -1,0 +1,14 @@
+/target/
+**/target/
+Cargo.lock
+*.pyc
+__pycache__/
+*.so
+*.dylib
+*.dll
+*.whl
+*.egg-info/
+dist/
+.uv-cache/
+.venv/
+.pytest_cache/

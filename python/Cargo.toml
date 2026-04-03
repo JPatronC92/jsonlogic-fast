@@ -1,0 +1,23 @@
+[package]
+name = "jsonlogic-fast-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Python bindings for jsonlogic-fast"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+readme = "README.md"
+keywords = ["json-logic", "rules", "python", "pyo3", "deterministic"]
+categories = ["api-bindings", "development-tools"]
+
+[lib]
+name = "jsonlogic_fast_py"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.28", features = ["extension-module", "abi3-py39"] }
+pythonize = "0.28"
+jsonlogic-fast = { version = "0.1.0", path = "../core" }
+serde_json.workspace = true
