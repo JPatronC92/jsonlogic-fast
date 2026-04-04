@@ -4,6 +4,10 @@
 [![docs.rs](https://docs.rs/jsonlogic-fast/badge.svg)](https://docs.rs/jsonlogic-fast)
 [![CI](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml/badge.svg)](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml)
 
+[![crates.io](https://img.shields.io/crates/v/jsonlogic-fast.svg)](https://crates.io/crates/jsonlogic-fast)
+[![docs.rs](https://docs.rs/jsonlogic-fast/badge.svg)](https://docs.rs/jsonlogic-fast)
+[![CI](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml/badge.svg)](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml)
+
 **Fast, embeddable, cross-runtime JSON-Logic evaluation.**
 
 ## Why

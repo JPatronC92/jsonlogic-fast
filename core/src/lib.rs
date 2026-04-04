@@ -31,6 +31,39 @@
 //! assert_eq!(results, vec![serde_json::json!(90), serde_json::json!(45)]);
 //! ```
 
+//! # jsonlogic-fast
+//!
+//! **Fast, embeddable, cross-runtime JSON-Logic evaluation.**
+//!
+//! Implements the full [JsonLogic](https://jsonlogic.com/) specification with
+//! batch evaluation, numeric coercion, and parallel execution via Rayon
+//! (sequential on WASM).
+//!
+//! ## Quick start
+//!
+//! ```rust
+//! use jsonlogic_fast::evaluate;
+//!
+//! let rule = r#"{">":[{"var":"age"},18]}"#;
+//! let context = r#"{"age":25}"#;
+//! let result = evaluate(rule, context).unwrap();
+//! assert_eq!(result, serde_json::json!(true));
+//! ```
+//!
+//! ## Batch evaluation
+//!
+//! ```rust
+//! use jsonlogic_fast::evaluate_batch;
+//!
+//! let rule = r#"{"var":"score"}"#;
+//! let contexts = vec![
+//!     r#"{"score":90}"#.to_string(),
+//!     r#"{"score":45}"#.to_string(),
+//! ];
+//! let results = evaluate_batch(rule, &contexts).unwrap();
+//! assert_eq!(results, vec![serde_json::json!(90), serde_json::json!(45)]);
+//! ```
+
 pub mod error;
 pub mod extract;
 
@@ -44,6 +77,7 @@ use extract::extract_f64;
 use rayon::prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Result of a single rule evaluation with optional error.
 /// Result of a single rule evaluation with optional error.
 pub struct EvaluationResult {
     pub result: Option<Value>,
@@ -67,6 +101,7 @@ impl EvaluationResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Numeric evaluation result with optional error.
 /// Numeric evaluation result with optional error.
 pub struct NumericEvaluationResult {
     pub result: f64,
@@ -152,6 +187,7 @@ fn available_threads() -> usize {
 }
 
 /// Evaluate a JSON-Logic rule against a single JSON context.
+/// Evaluate a JSON-Logic rule against a single JSON context.
 pub fn evaluate(rule_json: &str, context_json: &str) -> RuleEngineResult<Value> {
     let rule = parse_rule(rule_json)?;
     let context = parse_context(context_json)?;
@@ -159,15 +195,18 @@ pub fn evaluate(rule_json: &str, context_json: &str) -> RuleEngineResult<Value> 
 }
 
 /// Alias for [`evaluate`].
+/// Alias for [`evaluate`].
 pub fn evaluate_rule(rule_json: &str, context_json: &str) -> RuleEngineResult<Value> {
     evaluate(rule_json, context_json)
 }
 
 /// Evaluate a rule and coerce the result to `f64`.
+/// Evaluate a rule and coerce the result to `f64`.
 pub fn evaluate_numeric(rule_json: &str, context_json: &str) -> RuleEngineResult<f64> {
     extract_f64(evaluate(rule_json, context_json)?)
 }
 
+/// Evaluate a rule against many contexts (parallel on native, sequential on WASM).
 /// Evaluate a rule against many contexts (parallel on native, sequential on WASM).
 pub fn evaluate_batch(rule_json: &str, contexts_json: &[String]) -> RuleEngineResult<Vec<Value>> {
     let rule = parse_rule(rule_json)?;
@@ -179,6 +218,7 @@ pub fn evaluate_batch(rule_json: &str, contexts_json: &[String]) -> RuleEngineRe
 }
 
 /// Like [`evaluate_batch`] but returns [`EvaluationResult`] with error details.
+/// Like [`evaluate_batch`] but returns [`EvaluationResult`] with error details.
 pub fn evaluate_batch_detailed(
     rule_json: &str,
     contexts_json: &[String],
@@ -189,6 +229,7 @@ pub fn evaluate_batch_detailed(
     }))
 }
 
+/// Batch-evaluate and coerce every result to `f64`.
 /// Batch-evaluate and coerce every result to `f64`.
 pub fn evaluate_batch_numeric(
     rule_json: &str,
@@ -204,6 +245,7 @@ pub fn evaluate_batch_numeric(
         .collect())
 }
 
+/// Like [`evaluate_batch_numeric`] but returns [`NumericEvaluationResult`] with errors.
 /// Like [`evaluate_batch_numeric`] but returns [`NumericEvaluationResult`] with errors.
 pub fn evaluate_batch_numeric_detailed(
     rule_json: &str,
@@ -236,6 +278,7 @@ pub fn evaluate_batch_numeric_detailed(
 }
 
 /// Validate that a rule can be evaluated without errors.
+/// Validate that a rule can be evaluated without errors.
 pub fn validate_rule(rule_json: &str) -> RuleEngineResult<bool> {
     let rule = parse_rule(rule_json)?;
     let context = default_validation_context();
@@ -246,15 +289,18 @@ pub fn validate_rule(rule_json: &str) -> RuleEngineResult<bool> {
 }
 
 /// Serialize a [`Value`] to a JSON string.
+/// Serialize a [`Value`] to a JSON string.
 pub fn serialize_value(value: &Value) -> RuleEngineResult<String> {
     serde_json::to_string(value).map_err(|e| RuleEngineError::Serialization(e.to_string()))
 }
 
 /// Serialize any `Serialize` implementor to a JSON string.
+/// Serialize any `Serialize` implementor to a JSON string.
 pub fn serialize<T: Serialize>(value: &T) -> RuleEngineResult<String> {
     serde_json::to_string(value).map_err(|e| RuleEngineError::Serialization(e.to_string()))
 }
 
+/// Return engine metadata (version, parallelism mode, thread count).
 /// Return engine metadata (version, parallelism mode, thread count).
 pub fn get_core_info() -> Value {
     json!({
