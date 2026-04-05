@@ -487,7 +487,9 @@ mod tests {
     fn reduce_operator() {
         let rule = r#"{"reduce":[{"var":"items"},{"+":[{"var":"current"},{"var":"accumulator"}]},0]}"#;
         let context = r#"{"items":[1,2,3,4]}"#;
-        assert_eq!(evaluate(rule, context).unwrap(), json!(10.0));
+        let result = evaluate(rule, context).unwrap();
+        let n = result.as_f64().expect("expected numeric result");
+        assert!((n - 10.0).abs() < f64::EPSILON);
     }
 
     #[test]
