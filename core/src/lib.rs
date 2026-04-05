@@ -368,7 +368,8 @@ mod tests {
 
     #[test]
     fn deeply_nested_conditionals() {
-        let rule = r#"{"if":[{">":[{"var":"x"},10]},{"if":[{">":[{"var":"x"},20]},"high","mid"]},"low"]}"#;
+        let rule =
+            r#"{"if":[{">":[{"var":"x"},10]},{"if":[{">":[{"var":"x"},20]},"high","mid"]},"low"]}"#;
         let context = r#"{"x":25}"#;
         assert_eq!(evaluate(rule, context).unwrap(), json!("high"));
     }
@@ -485,10 +486,11 @@ mod tests {
 
     #[test]
     fn reduce_operator() {
-        let rule = r#"{"reduce":[{"var":"items"},{"+":[{"var":"current"},{"var":"accumulator"}]},0]}"#;
+        let rule =
+            r#"{"reduce":[{"var":"items"},{"+":[{"var":"current"},{"var":"accumulator"}]},0]}"#;
         let context = r#"{"items":[1,2,3,4]}"#;
-        let result = evaluate(rule, context)
-            .unwrap_or_else(|e| panic!("reduce evaluation failed: {e}"));
+        let result =
+            evaluate(rule, context).unwrap_or_else(|e| panic!("reduce evaluation failed: {e}"));
         let n = result
             .as_f64()
             .unwrap_or_else(|| panic!("expected numeric result, got: {result}"));
