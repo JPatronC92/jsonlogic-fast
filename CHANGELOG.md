@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — Unreleased
+## [0.1.1] — 2026-04-05
+
+### Added
+- 27 comprehensive Rust core tests (nested var paths, recursive if, all data types,
+  arithmetic, comparison, logical short-circuit, array ops, between, complex rules)
+- Python comparative benchmark (`benchmarks/compare.py`) vs json-logic-qubit
+- `make bench-python` target
+- Performance section in README with real benchmark results
+- `CONTRIBUTING.md`
+- PyPI publish workflow (`publish-pypi.yml`)
+
+### Fixed
+- Duplicated doc-comments in `core/src/lib.rs`
+- Duplicated badge lines in `README.md`
+- Workspace repository/homepage URLs pointing to wrong repo
+
+## [0.1.0] — 2026-04-04
 
 ### Added
 

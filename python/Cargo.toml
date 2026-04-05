@@ -19,5 +19,5 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.28", features = ["extension-module", "abi3-py39"] }
 pythonize = "0.28"
-jsonlogic-fast = { version = "0.1.0", path = "../core" }
+jsonlogic-fast = { version = "0.1.1", path = "../core" }
 serde_json.workspace = true

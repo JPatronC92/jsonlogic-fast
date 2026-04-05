@@ -295,7 +295,7 @@ dependencies = [
 
 [[package]]
 name = "jsonlogic-fast"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "criterion",
  "jsonlogic",
@@ -307,7 +307,7 @@ dependencies = [
 
 [[package]]
 name = "jsonlogic-fast-python"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "jsonlogic-fast",
  "pyo3",
@@ -317,7 +317,7 @@ dependencies = [
 
 [[package]]
 name = "jsonlogic-fast-wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "jsonlogic-fast",
  "serde_json",
