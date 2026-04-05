@@ -4,10 +4,6 @@
 [![docs.rs](https://docs.rs/jsonlogic-fast/badge.svg)](https://docs.rs/jsonlogic-fast)
 [![CI](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml/badge.svg)](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml)
 
-[![crates.io](https://img.shields.io/crates/v/jsonlogic-fast.svg)](https://crates.io/crates/jsonlogic-fast)
-[![docs.rs](https://docs.rs/jsonlogic-fast/badge.svg)](https://docs.rs/jsonlogic-fast)
-[![CI](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml/badge.svg)](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml)
-
 **Fast, embeddable, cross-runtime JSON-Logic evaluation.**
 
 ## Why
@@ -95,6 +91,34 @@ Included benchmarks:
 - Single numeric evaluation
 - Single generic (conditional) evaluation
 - Batch numeric evaluation (10K contexts)
+
+## Performance
+
+`jsonlogic-fast` wraps the [jsonlogic-rs](https://crates.io/crates/jsonlogic) crate
+in a Rust core compiled to native code, exposed to Python via PyO3 and to browsers via
+WASM. The "fast" comes from:
+
+- **Zero Python overhead** — rule parsing, evaluation, and serialization happen entirely in Rust.
+- **Parallel batch evaluation** — Rayon distributes N contexts across all available CPU cores.
+- **Single parse, many evaluations** — `evaluate_batch` parses the rule once and reuses it.
+
+### Python: jsonlogic-fast vs json-logic-qubit (pure Python)
+
+| Scenario | jsonlogic-fast | json-logic-qubit | Speedup |
+|---|---|---|---|
+| Simple comparison | 0.001 ms | 0.004 ms | **3.6x** |
+| Conditional (nested if) | 0.003 ms | 0.011 ms | **4.0x** |
+| Complex (logic + arithmetic + var paths) | 0.005 ms | 0.025 ms | **4.7x** |
+| Batch 10K contexts | 5.3 ms | 51.4 ms (sequential loop) | **9.7x** |
+
+> Run `make bench-python` to reproduce. Run `make bench` for Criterion (Rust) benchmarks.
+
+### Rust (Criterion)
+
+```bash
+make bench          # full Criterion benchmarks (HTML reports in target/criterion/)
+make bench-quick    # reduced sample for quick feedback
+```
 
 ## Development
 

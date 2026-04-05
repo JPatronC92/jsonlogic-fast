@@ -7,8 +7,8 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.75"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/JPatronC92/First-T-Engine"
-homepage = "https://github.com/JPatronC92/First-T-Engine"
+repository = "https://github.com/JPatronC92/jsonlogic-fast"
+homepage = "https://github.com/JPatronC92/jsonlogic-fast"
 authors = ["JPatronC92"]
 
 [workspace.dependencies]

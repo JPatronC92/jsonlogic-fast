@@ -1,4 +1,4 @@
-.PHONY: help setup test clippy lint bench bench-quick build-py build-wasm test-python test-wasm ci-local
+.PHONY: help setup test clippy lint bench bench-quick bench-python build-py build-wasm test-python test-wasm ci-local
 UV_CACHE_DIR ?= .uv-cache
 
 help:
@@ -8,6 +8,7 @@ help:
 	@echo "  clippy      Run Rust linter with strict warnings"
 	@echo "  bench       Run Criterion benchmarks"
 	@echo "  bench-quick Run reduced benchmarks"
+	@echo "  bench-python Compare jsonlogic-fast vs json-logic-py"
 	@echo "  build-py    Build Python wheel"
 	@echo "  build-wasm  Check WASM compilation"
 	@echo "  test-python Build + run Python e2e tests"
@@ -28,6 +29,9 @@ bench:
 
 bench-quick:
 	cd core && cargo bench --bench bench -- --sample-size 10
+
+bench-python:
+	cd python && UV_CACHE_DIR=$(abspath $(UV_CACHE_DIR)) uv run --with maturin --with json-logic-qubit bash -c "maturin develop --release && python $(CURDIR)/benchmarks/compare.py"
 
 build-py:
 	cd python && UV_CACHE_DIR=$(abspath $(UV_CACHE_DIR)) uv run --with maturin maturin build --release
