@@ -245,11 +245,6 @@ pub fn validate_rule(rule_json: &str) -> RuleEngineResult<bool> {
         .map_err(|error| RuleEngineError::Evaluation(format!("Rule validation failed: {error}")))
 }
 
-/// Serialize a [`Value`] to a JSON string.
-pub fn serialize_value(value: &Value) -> RuleEngineResult<String> {
-    serde_json::to_string(value).map_err(|e| RuleEngineError::Serialization(e.to_string()))
-}
-
 /// Serialize any `Serialize` implementor to a JSON string.
 pub fn serialize<T: Serialize>(value: &T) -> RuleEngineResult<String> {
     serde_json::to_string(value).map_err(|e| RuleEngineError::Serialization(e.to_string()))
