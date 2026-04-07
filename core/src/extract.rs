@@ -16,7 +16,7 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
         Value::Null => Ok(0.0),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected numeric result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
+            other
         ))),
     }
 }
@@ -36,7 +36,7 @@ pub fn extract_bool(result: Value) -> RuleEngineResult<bool> {
         Value::Null => Ok(false),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected boolean result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
+            other
         ))),
     }
 }
@@ -49,17 +49,7 @@ pub fn extract_string(result: Value) -> RuleEngineResult<String> {
         Value::Null => Ok(String::new()),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected string result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
-        ))),
-    }
-}
-
-pub fn extract_array(result: Value) -> RuleEngineResult<Vec<Value>> {
-    match result {
-        Value::Array(values) => Ok(values),
-        other => Err(RuleEngineError::NumericCoercion(format!(
-            "Expected array result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
+            other
         ))),
     }
 }
@@ -69,7 +59,7 @@ pub fn extract_object(result: Value) -> RuleEngineResult<Map<String, Value>> {
         Value::Object(values) => Ok(values),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected object result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
+            other
         ))),
     }
 }
@@ -96,12 +86,6 @@ mod tests {
     fn extract_string_serializes_scalars() {
         assert_eq!(extract_string(json!(7)).unwrap(), "7");
         assert_eq!(extract_string(Value::Bool(false)).unwrap(), "false");
-    }
-
-    #[test]
-    fn extract_array_rejects_non_arrays() {
-        let error = extract_array(json!({"a": 1})).unwrap_err();
-        assert!(matches!(error, RuleEngineError::NumericCoercion(_)));
     }
 
     #[test]
