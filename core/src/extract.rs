@@ -101,15 +101,10 @@ mod tests {
     fn test_extract_f64_exposure_protection() {
         let sensitive_data = json!({"secret": "sensitive"});
         let error = extract_f64(sensitive_data).unwrap_err();
-        if let RuleEngineError::NumericCoercion(msg) = error {
-            assert!(
-                !msg.contains("secret"),
-                "Error message contains sensitive data: {}",
-                msg
-            );
-        } else {
-            panic!("Expected NumericCoercion error");
-        }
+        assert!(
+            matches!(error, RuleEngineError::NumericCoercion(ref msg) if !msg.contains("secret")),
+            "Expected NumericCoercion without sensitive data, but the error either had the wrong type or exposed the secret."
+        );
     }
 
     #[test]
