@@ -312,6 +312,7 @@ dependencies = [
  "jsonlogic-fast",
  "pyo3",
  "pythonize",
+ "serde",
  "serde_json",
 ]
 
@@ -320,6 +321,7 @@ name = "jsonlogic-fast-wasm"
 version = "0.1.1"
 dependencies = [
  "jsonlogic-fast",
+ "serde",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-test",
