@@ -131,6 +131,19 @@ class TestEvaluateBatchJson:
         parsed = json.loads(result)
         assert parsed == ["approve", "review"]
 
+    def test_empty_batch(self):
+        result = jsonlogic_fast.evaluate_batch_json(CONDITIONAL_RULE, [])
+        assert result == "[]"
+
+    def test_invalid_rule_raises(self):
+        with pytest.raises(ValueError):
+            jsonlogic_fast.evaluate_batch_json(INVALID_JSON, [_ctx(score=1)])
+
+    def test_invalid_context_returns_null(self):
+        result = jsonlogic_fast.evaluate_batch_json(CONDITIONAL_RULE, [INVALID_JSON])
+        parsed = json.loads(result)
+        assert parsed == [None]
+
 
 # ---------------------------------------------------------------------------
 # evaluate_batch_detailed

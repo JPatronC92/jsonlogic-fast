@@ -4,9 +4,16 @@ use jsonlogic_fast::{
     evaluate_batch_numeric as core_evaluate_batch_numeric,
     evaluate_batch_numeric_detailed as core_evaluate_batch_numeric_detailed,
     evaluate_numeric as core_evaluate_numeric, get_core_info as core_get_core_info,
-    serialize as core_serialize, validate_rule as core_validate_rule,
+    validate_rule as core_validate_rule,
 };
 use wasm_bindgen::prelude::*;
+
+
+fn core_serialize(value: &impl serde::Serialize) -> Result<String, jsonlogic_fast::error::RuleEngineError> {
+    serde_json::to_string(value).map_err(|e| jsonlogic_fast::error::RuleEngineError::Serialization(e.to_string()))
+}
+
+
 
 fn js_error(message: impl Into<String>) -> JsValue {
     JsValue::from_str(&message.into())
