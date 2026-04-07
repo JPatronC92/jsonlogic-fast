@@ -41,19 +41,6 @@ pub fn extract_bool(result: Value) -> RuleEngineResult<bool> {
     }
 }
 
-pub fn extract_string(result: Value) -> RuleEngineResult<String> {
-    match result {
-        Value::String(value) => Ok(value),
-        Value::Number(n) => Ok(n.to_string()),
-        Value::Bool(b) => Ok(b.to_string()),
-        Value::Null => Ok(String::new()),
-        other => Err(RuleEngineError::NumericCoercion(format!(
-            "Expected string result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
-        ))),
-    }
-}
-
 pub fn extract_array(result: Value) -> RuleEngineResult<Vec<Value>> {
     match result {
         Value::Array(values) => Ok(values),
@@ -90,12 +77,6 @@ mod tests {
     fn extract_bool_accepts_common_scalar_values() {
         assert!(extract_bool(Value::String("true".to_string())).unwrap());
         assert!(!extract_bool(json!(0)).unwrap());
-    }
-
-    #[test]
-    fn extract_string_serializes_scalars() {
-        assert_eq!(extract_string(json!(7)).unwrap(), "7");
-        assert_eq!(extract_string(Value::Bool(false)).unwrap(), "false");
     }
 
     #[test]
