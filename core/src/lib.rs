@@ -195,6 +195,7 @@ pub fn evaluate_batch_numeric(
     contexts_json: &[String],
 ) -> RuleEngineResult<Vec<f64>> {
     let results = evaluate_batch_detailed(rule_json, contexts_json)?;
+
     results
         .into_iter()
         .map(|item| match (item.result, item.error) {
@@ -205,6 +206,7 @@ pub fn evaluate_batch_numeric(
             )),
         })
         .collect()
+
 }
 
 /// Like [`evaluate_batch_numeric`] but returns [`NumericEvaluationResult`] with errors.
@@ -249,9 +251,7 @@ pub fn validate_rule(rule_json: &str) -> RuleEngineResult<bool> {
 }
 
 /// Serialize any `Serialize` implementor to a JSON string.
-pub fn serialize<T: Serialize>(value: &T) -> RuleEngineResult<String> {
-    serde_json::to_string(value).map_err(|e| RuleEngineError::Serialization(e.to_string()))
-}
+
 
 /// Return engine metadata (version, parallelism mode, thread count).
 pub fn get_core_info() -> Value {
@@ -312,11 +312,13 @@ mod tests {
     }
 
     #[test]
+
     fn evaluate_batch_numeric_fails_on_invalid_contexts() {
         let rule = r#"{"var":"amount"}"#;
         let contexts = vec!["{}".to_string(), "{bad json}".to_string()];
 
         assert!(evaluate_batch_numeric(rule, &contexts).is_err());
+
     }
 
     #[test]
@@ -562,5 +564,79 @@ mod tests {
         }"#;
         let context = r#"{"score":750,"country":"MX","tier":"gold","amount":1000}"#;
         assert_eq!(evaluate_numeric(rule, context).unwrap(), 25.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // evaluate_batch_numeric_detailed
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_success() {
+        let rule = r#"{"*":[{"var":"amount"},2]}"#;
+        let contexts = vec![
+            r#"{"amount":10}"#.to_string(),
+            r#"{"amount":25}"#.to_string(),
+        ];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].result, 20.0);
+        assert_eq!(results[0].error, None);
+        assert_eq!(results[1].result, 50.0);
+        assert_eq!(results[1].error, None);
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_coercion_error() {
+        let rule = r#"{"if":[{"==":[{"var":"type"},"good"]},10,"bad_result"]}"#;
+        let contexts = vec![
+            r#"{"type":"good"}"#.to_string(),
+            r#"{"type":"bad"}"#.to_string(),
+        ];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].result, 10.0);
+        assert_eq!(results[0].error, None);
+        assert_eq!(results[1].result, 0.0);
+        assert!(results[1].error.as_ref().unwrap().contains("Numeric coercion error: String result is not a valid number"));
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_context_error() {
+        let rule = r#"{"var":"amount"}"#;
+        let contexts = vec![
+            r#"{"amount":10}"#.to_string(),
+            "{bad json}".to_string(),
+        ];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].result, 10.0);
+        assert_eq!(results[0].error, None);
+        assert_eq!(results[1].result, 0.0);
+        assert!(results[1].error.as_ref().unwrap().contains("Error parsing context"));
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_invalid_rule() {
+        let rule = "{bad json}";
+        let contexts = vec![r#"{"amount":10}"#.to_string()];
+        let result = evaluate_batch_numeric_detailed(rule, &contexts);
+
+        assert!(result.is_err());
+        match result {
+            Err(RuleEngineError::InvalidRule(msg)) => assert!(msg.contains("key must be a string")),
+            _ => panic!("Expected RuleEngineError::InvalidRule"),
+        }
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_empty_contexts() {
+        let rule = r#"{"var":"amount"}"#;
+        let contexts: Vec<String> = vec![];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 0);
     }
 }
