@@ -23,6 +23,7 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
 
 
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
