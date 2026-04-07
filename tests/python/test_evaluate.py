@@ -20,7 +20,6 @@ CONDITIONAL_RULE = json.dumps(
 NUMERIC_RULE = json.dumps({"*": [{"var": "amount"}, 0.029]})
 ALWAYS_TRUE_RULE = json.dumps({"==": [1, 1]})
 INVALID_JSON = "not valid json {{"
-INVALID_RULE = json.dumps({"unsupported_op_xyz": [1, 2]})
 
 
 def _ctx(**kwargs) -> str:
