@@ -15,13 +15,22 @@ fn py_value_error(message: impl Into<String>) -> PyErr {
     PyValueError::new_err(message.into())
 }
 
+trait PyResultExt<T> {
+    fn map_py_err(self) -> PyResult<T>;
+}
+
+impl<T, E: std::fmt::Display> PyResultExt<T> for Result<T, E> {
+    fn map_py_err(self) -> PyResult<T> {
+        self.map_err(|e| py_value_error(e.to_string()))
+    }
+}
+
 #[pyfunction]
 fn evaluate(py: Python<'_>, rule_json: &str, context_json: &str) -> PyResult<Py<PyAny>> {
-    let result =
-        core_evaluate(rule_json, context_json).map_err(|e| py_value_error(e.to_string()))?;
+    let result = core_evaluate(rule_json, context_json).map_py_err()?;
     pythonize(py, &result)
         .map(|value| value.unbind())
-        .map_err(|e| py_value_error(e.to_string()))
+        .map_py_err()
 }
 
 #[pyfunction]
@@ -31,14 +40,13 @@ fn evaluate_rule(py: Python<'_>, rule_json: &str, context_json: &str) -> PyResul
 
 #[pyfunction]
 fn evaluate_json(rule_json: &str, context_json: &str) -> PyResult<String> {
-    let result =
-        core_evaluate(rule_json, context_json).map_err(|e| py_value_error(e.to_string()))?;
-    core_serialize(&result).map_err(|e| py_value_error(e.to_string()))
+    let result = core_evaluate(rule_json, context_json).map_py_err()?;
+    core_serialize(&result).map_py_err()
 }
 
 #[pyfunction]
 fn evaluate_numeric(rule_json: &str, context_json: &str) -> PyResult<f64> {
-    core_evaluate_numeric(rule_json, context_json).map_err(|e| py_value_error(e.to_string()))
+    core_evaluate_numeric(rule_json, context_json).map_py_err()
 }
 
 #[pyfunction]
@@ -47,18 +55,16 @@ fn evaluate_batch(
     rule_json: &str,
     contexts_json: Vec<String>,
 ) -> PyResult<Py<PyAny>> {
-    let result = core_evaluate_batch(rule_json, &contexts_json)
-        .map_err(|e| py_value_error(e.to_string()))?;
+    let result = core_evaluate_batch(rule_json, &contexts_json).map_py_err()?;
     pythonize(py, &result)
         .map(|value| value.unbind())
-        .map_err(|e| py_value_error(e.to_string()))
+        .map_py_err()
 }
 
 #[pyfunction]
 fn evaluate_batch_json(rule_json: &str, contexts_json: Vec<String>) -> PyResult<String> {
-    let result = core_evaluate_batch(rule_json, &contexts_json)
-        .map_err(|e| py_value_error(e.to_string()))?;
-    core_serialize(&result).map_err(|e| py_value_error(e.to_string()))
+    let result = core_evaluate_batch(rule_json, &contexts_json).map_py_err()?;
+    core_serialize(&result).map_py_err()
 }
 
 #[pyfunction]
@@ -67,17 +73,15 @@ fn evaluate_batch_detailed(
     rule_json: &str,
     contexts_json: Vec<String>,
 ) -> PyResult<Py<PyAny>> {
-    let result = core_evaluate_batch_detailed(rule_json, &contexts_json)
-        .map_err(|e| py_value_error(e.to_string()))?;
+    let result = core_evaluate_batch_detailed(rule_json, &contexts_json).map_py_err()?;
     pythonize(py, &result)
         .map(|value| value.unbind())
-        .map_err(|e| py_value_error(e.to_string()))
+        .map_py_err()
 }
 
 #[pyfunction]
 fn evaluate_batch_numeric(rule_json: &str, contexts_json: Vec<String>) -> PyResult<Vec<f64>> {
-    core_evaluate_batch_numeric(rule_json, &contexts_json)
-        .map_err(|e| py_value_error(e.to_string()))
+    core_evaluate_batch_numeric(rule_json, &contexts_json).map_py_err()
 }
 
 #[pyfunction]
@@ -85,8 +89,7 @@ fn evaluate_batch_numeric_detailed(
     rule_json: &str,
     contexts_json: Vec<String>,
 ) -> PyResult<(Vec<f64>, Vec<String>)> {
-    let result = core_evaluate_batch_numeric_detailed(rule_json, &contexts_json)
-        .map_err(|e| py_value_error(e.to_string()))?;
+    let result = core_evaluate_batch_numeric_detailed(rule_json, &contexts_json).map_py_err()?;
 
     let values = result.iter().map(|item| item.result).collect();
     let errors = result
@@ -99,12 +102,12 @@ fn evaluate_batch_numeric_detailed(
 
 #[pyfunction]
 fn validate_rule(rule_json: &str) -> PyResult<bool> {
-    core_validate_rule(rule_json).map_err(|e| py_value_error(e.to_string()))
+    core_validate_rule(rule_json).map_py_err()
 }
 
 #[pyfunction]
 fn get_core_info() -> PyResult<String> {
-    core_serialize(&core_get_core_info()).map_err(|e| py_value_error(e.to_string()))
+    core_serialize(&core_get_core_info()).map_py_err()
 }
 
 #[pymodule]
