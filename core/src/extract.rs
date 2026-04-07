@@ -2,6 +2,17 @@ use serde_json::{Map, Value};
 
 use crate::error::{RuleEngineError, RuleEngineResult};
 
+fn value_type(v: &Value) -> &'static str {
+    match v {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
+
 pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
     match result {
         Value::Number(n) => n.as_f64().ok_or_else(|| {
@@ -16,7 +27,7 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
         Value::Null => Ok(0.0),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected numeric result, got: {}",
-            other
+            value_type(&other)
         ))),
     }
 }
@@ -36,7 +47,7 @@ pub fn extract_bool(result: Value) -> RuleEngineResult<bool> {
         Value::Null => Ok(false),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected boolean result, got: {}",
-            other
+            value_type(&other)
         ))),
     }
 }
@@ -49,7 +60,7 @@ pub fn extract_string(result: Value) -> RuleEngineResult<String> {
         Value::Null => Ok(String::new()),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected string result, got: {}",
-            other
+            value_type(&other)
         ))),
     }
 }
@@ -59,7 +70,7 @@ pub fn extract_array(result: Value) -> RuleEngineResult<Vec<Value>> {
         Value::Array(values) => Ok(values),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected array result, got: {}",
-            other
+            value_type(&other)
         ))),
     }
 }
@@ -69,7 +80,7 @@ pub fn extract_object(result: Value) -> RuleEngineResult<Map<String, Value>> {
         Value::Object(values) => Ok(values),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected object result, got: {}",
-            other
+            value_type(&other)
         ))),
     }
 }
