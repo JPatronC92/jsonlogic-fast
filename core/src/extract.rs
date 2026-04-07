@@ -21,26 +21,6 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
     }
 }
 
-pub fn extract_bool(result: Value) -> RuleEngineResult<bool> {
-    match result {
-        Value::Bool(value) => Ok(value),
-        Value::Number(n) => Ok(n.as_f64().unwrap_or_default() != 0.0),
-        Value::String(s) => match s.to_ascii_lowercase().as_str() {
-            "true" | "1" => Ok(true),
-            "false" | "0" | "" => Ok(false),
-            _ => Err(RuleEngineError::NumericCoercion(format!(
-                "String result '{}' is not a valid boolean",
-                s
-            ))),
-        },
-        Value::Null => Ok(false),
-        other => Err(RuleEngineError::NumericCoercion(format!(
-            "Expected boolean result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
-        ))),
-    }
-}
-
 pub fn extract_string(result: Value) -> RuleEngineResult<String> {
     match result {
         Value::String(value) => Ok(value),
@@ -84,12 +64,6 @@ mod tests {
     fn extract_f64_accepts_bool_and_null() {
         assert_eq!(extract_f64(Value::Bool(true)).unwrap(), 1.0);
         assert_eq!(extract_f64(Value::Null).unwrap(), 0.0);
-    }
-
-    #[test]
-    fn extract_bool_accepts_common_scalar_values() {
-        assert!(extract_bool(Value::String("true".to_string())).unwrap());
-        assert!(!extract_bool(json!(0)).unwrap());
     }
 
     #[test]
