@@ -111,6 +111,63 @@ mod tests {
             panic!("Expected NumericCoercion error");
         }
     }
+
+    #[test]
+    fn test_extract_f64_errors() {
+        let invalid_string = json!("abc");
+        assert!(matches!(
+            extract_f64(invalid_string),
+            Err(RuleEngineError::NumericCoercion(_))
+        ));
+
+        let object = json!({"a": 1});
+        assert!(matches!(
+            extract_f64(object),
+            Err(RuleEngineError::NumericCoercion(_))
+        ));
+    }
+
+    #[test]
+    fn test_extract_bool_errors() {
+        let invalid_bool_string = json!("maybe");
+        assert!(matches!(
+            extract_bool(invalid_bool_string),
+            Err(RuleEngineError::NumericCoercion(_))
+        ));
+
+        let array = json!([1, 2, 3]);
+        assert!(matches!(
+            extract_bool(array),
+            Err(RuleEngineError::NumericCoercion(_))
+        ));
+    }
+
+    #[test]
+    fn test_extract_string_errors() {
+        let object = json!({"a": 1});
+        assert!(matches!(
+            extract_string(object),
+            Err(RuleEngineError::NumericCoercion(_))
+        ));
+    }
+
+    #[test]
+    fn test_extract_array_errors() {
+        let s = json!("not an array");
+        assert!(matches!(
+            extract_array(s),
+            Err(RuleEngineError::NumericCoercion(_))
+        ));
+    }
+
+    #[test]
+    fn test_extract_object_errors() {
+        let array = json!([1, 2, 3]);
+        assert!(matches!(
+            extract_object(array),
+            Err(RuleEngineError::NumericCoercion(_))
+        ));
+    }
 }
 
 // Code Health Check: False-positive test. Code preserved.
