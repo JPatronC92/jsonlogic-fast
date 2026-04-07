@@ -64,16 +64,6 @@ pub fn extract_array(result: Value) -> RuleEngineResult<Vec<Value>> {
     }
 }
 
-pub fn extract_object(result: Value) -> RuleEngineResult<Map<String, Value>> {
-    match result {
-        Value::Object(values) => Ok(values),
-        other => Err(RuleEngineError::NumericCoercion(format!(
-            "Expected object result, got: {}",
-            serde_json::to_string(&other).unwrap_or_default()
-        ))),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -104,9 +94,4 @@ mod tests {
         assert!(matches!(error, RuleEngineError::NumericCoercion(_)));
     }
 
-    #[test]
-    fn extract_object_accepts_json_objects() {
-        let object = extract_object(json!({"country": "MX"})).unwrap();
-        assert_eq!(object.get("country"), Some(&json!("MX")));
-    }
 }
