@@ -168,6 +168,10 @@ mod tests {
             Err(RuleEngineError::NumericCoercion(_))
         ));
     }
-}
 
-// Code Health Check: False-positive test. Code preserved.
+    #[test]
+    fn extract_f64_rejects_non_scalars() {
+        let error = extract_f64(json!({"a": 1})).unwrap_err();
+        assert!(matches!(error, RuleEngineError::NumericCoercion(_)));
+    }
+}
