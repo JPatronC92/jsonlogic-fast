@@ -109,4 +109,10 @@ mod tests {
         let object = extract_object(json!({"country": "MX"})).unwrap();
         assert_eq!(object.get("country"), Some(&json!("MX")));
     }
+
+    #[test]
+    fn extract_bool_rejects_invalid_string() {
+        let error = extract_bool(Value::String("yes".to_string())).unwrap_err();
+        assert!(matches!(error, RuleEngineError::NumericCoercion(_)));
+    }
 }
