@@ -10,13 +10,13 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
             )
         }),
         Value::String(s) => s.parse::<f64>().map_err(|_| {
-            RuleEngineError::NumericCoercion(format!("String result '{}' is not a valid number", s))
+            RuleEngineError::NumericCoercion("String result is not a valid number".to_string())
         }),
         Value::Bool(b) => Ok(if b { 1.0 } else { 0.0 }),
         Value::Null => Ok(0.0),
         other => Err(RuleEngineError::NumericCoercion(format!(
             "Expected numeric result, got: {}",
-            other
+            value_type(&other)
         ))),
     }
 }
@@ -24,13 +24,36 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
 
 
 
+fn value_type(val: &Value) -> &'static str {
+    match val {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn extract_f64_accepts_bool_and_null() {
         assert_eq!(extract_f64(Value::Bool(true)).unwrap(), 1.0);
         assert_eq!(extract_f64(Value::Null).unwrap(), 0.0);
+    }
+
+    #[test]
+    fn test_extract_f64_exposure_protection() {
+        let sensitive_data = json!({"secret": "sensitive"});
+        let error = extract_f64(sensitive_data).unwrap_err();
+        if let RuleEngineError::NumericCoercion(msg) = error {
+            assert!(!msg.contains("secret"), "Error message contains sensitive data: {}", msg);
+        } else {
+            panic!("Expected NumericCoercion error");
+        }
     }
 }
