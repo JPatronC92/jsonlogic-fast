@@ -484,11 +484,8 @@ mod tests {
         let rule =
             r#"{"reduce":[{"var":"items"},{"+":[{"var":"current"},{"var":"accumulator"}]},0]}"#;
         let context = r#"{"items":[1,2,3,4]}"#;
-        let result =
-            evaluate(rule, context).unwrap_or_else(|e| panic!("reduce evaluation failed: {e}"));
-        let n = result
-            .as_f64()
-            .unwrap_or_else(|| panic!("expected numeric result, got: {result}"));
+        let result = evaluate(rule, context).expect("reduce evaluation failed");
+        let n = result.as_f64().expect("expected numeric result");
         assert!((n - 10.0).abs() < 1e-6, "expected 10.0, got {n}");
     }
 
