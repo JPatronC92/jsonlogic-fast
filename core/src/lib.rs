@@ -195,13 +195,16 @@ pub fn evaluate_batch_numeric(
     contexts_json: &[String],
 ) -> RuleEngineResult<Vec<f64>> {
     let results = evaluate_batch_detailed(rule_json, contexts_json)?;
-    Ok(results
+    results
         .into_iter()
-        .map(|item| match item.result {
-            Some(result) => extract_f64(result).unwrap_or(0.0),
-            None => 0.0,
+        .map(|item| match (item.result, item.error) {
+            (Some(result), None) => extract_f64(result),
+            (_, Some(error)) => Err(RuleEngineError::Evaluation(error)),
+            (None, None) => Err(RuleEngineError::Evaluation(
+                "Unknown evaluation failure".to_string(),
+            )),
         })
-        .collect())
+        .collect()
 }
 
 /// Like [`evaluate_batch_numeric`] but returns [`NumericEvaluationResult`] with errors.
@@ -309,14 +312,11 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_batch_numeric_keeps_fail_safe_zeroes() {
+    fn evaluate_batch_numeric_fails_on_invalid_contexts() {
         let rule = r#"{"var":"amount"}"#;
         let contexts = vec!["{}".to_string(), "{bad json}".to_string()];
 
-        assert_eq!(
-            evaluate_batch_numeric(rule, &contexts).unwrap(),
-            vec![0.0, 0.0]
-        );
+        assert!(evaluate_batch_numeric(rule, &contexts).is_err());
     }
 
     #[test]
