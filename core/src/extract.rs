@@ -1,6 +1,17 @@
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::error::{RuleEngineError, RuleEngineResult};
+
+fn value_type(v: &Value) -> &'static str {
+    match v {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
 
 pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
     match result {
@@ -21,17 +32,56 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
     }
 }
 
+pub fn extract_bool(result: Value) -> RuleEngineResult<bool> {
+    match result {
+        Value::Bool(value) => Ok(value),
+        Value::Number(n) => Ok(n.as_f64().unwrap_or_default() != 0.0),
+        Value::String(s) => match s.to_ascii_lowercase().as_str() {
+            "true" | "1" => Ok(true),
+            "false" | "0" | "" => Ok(false),
+            _ => Err(RuleEngineError::NumericCoercion(format!(
+                "String result '{}' is not a valid boolean",
+                s
+            ))),
+        },
+        Value::Null => Ok(false),
+        other => Err(RuleEngineError::NumericCoercion(format!(
+            "Expected boolean result, got: {}",
+            value_type(&other)
+        ))),
+    }
+}
 
+pub fn extract_string(result: Value) -> RuleEngineResult<String> {
+    match result {
+        Value::String(value) => Ok(value),
+        Value::Number(n) => Ok(n.to_string()),
+        Value::Bool(b) => Ok(b.to_string()),
+        Value::Null => Ok(String::new()),
+        other => Err(RuleEngineError::NumericCoercion(format!(
+            "Expected string result, got: {}",
+            value_type(&other)
+        ))),
+    }
+}
 
+pub fn extract_array(result: Value) -> RuleEngineResult<Vec<Value>> {
+    match result {
+        Value::Array(values) => Ok(values),
+        other => Err(RuleEngineError::NumericCoercion(format!(
+            "Expected array result, got: {}",
+            value_type(&other)
+        ))),
+    }
+}
 
-fn value_type(val: &Value) -> &'static str {
-    match val {
-        Value::Null => "null",
-        Value::Bool(_) => "boolean",
-        Value::Number(_) => "number",
-        Value::String(_) => "string",
-        Value::Array(_) => "array",
-        Value::Object(_) => "object",
+pub fn extract_object(result: Value) -> RuleEngineResult<Map<String, Value>> {
+    match result {
+        Value::Object(values) => Ok(values),
+        other => Err(RuleEngineError::NumericCoercion(format!(
+            "Expected object result, got: {}",
+            value_type(&other)
+        ))),
     }
 }
 
@@ -51,7 +101,11 @@ mod tests {
         let sensitive_data = json!({"secret": "sensitive"});
         let error = extract_f64(sensitive_data).unwrap_err();
         if let RuleEngineError::NumericCoercion(msg) = error {
-            assert!(!msg.contains("secret"), "Error message contains sensitive data: {}", msg);
+            assert!(
+                !msg.contains("secret"),
+                "Error message contains sensitive data: {}",
+                msg
+            );
         } else {
             panic!("Expected NumericCoercion error");
         }
