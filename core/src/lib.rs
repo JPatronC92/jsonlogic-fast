@@ -566,4 +566,78 @@ mod tests {
         let context = r#"{"score":750,"country":"MX","tier":"gold","amount":1000}"#;
         assert_eq!(evaluate_numeric(rule, context).unwrap(), 25.0);
     }
+
+    // -----------------------------------------------------------------------
+    // evaluate_batch_numeric_detailed
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_success() {
+        let rule = r#"{"*":[{"var":"amount"},2]}"#;
+        let contexts = vec![
+            r#"{"amount":10}"#.to_string(),
+            r#"{"amount":25}"#.to_string(),
+        ];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].result, 20.0);
+        assert_eq!(results[0].error, None);
+        assert_eq!(results[1].result, 50.0);
+        assert_eq!(results[1].error, None);
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_coercion_error() {
+        let rule = r#"{"if":[{"==":[{"var":"type"},"good"]},10,"bad_result"]}"#;
+        let contexts = vec![
+            r#"{"type":"good"}"#.to_string(),
+            r#"{"type":"bad"}"#.to_string(),
+        ];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].result, 10.0);
+        assert_eq!(results[0].error, None);
+        assert_eq!(results[1].result, 0.0);
+        assert!(results[1].error.as_ref().unwrap().contains("Numeric coercion error: String result is not a valid number"));
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_context_error() {
+        let rule = r#"{"var":"amount"}"#;
+        let contexts = vec![
+            r#"{"amount":10}"#.to_string(),
+            "{bad json}".to_string(),
+        ];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].result, 10.0);
+        assert_eq!(results[0].error, None);
+        assert_eq!(results[1].result, 0.0);
+        assert!(results[1].error.as_ref().unwrap().contains("Error parsing context"));
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_invalid_rule() {
+        let rule = "{bad json}";
+        let contexts = vec![r#"{"amount":10}"#.to_string()];
+        let result = evaluate_batch_numeric_detailed(rule, &contexts);
+
+        assert!(result.is_err());
+        match result {
+            Err(RuleEngineError::InvalidRule(msg)) => assert!(msg.contains("key must be a string")),
+            _ => panic!("Expected RuleEngineError::InvalidRule"),
+        }
+    }
+
+    #[test]
+    fn evaluate_batch_numeric_detailed_empty_contexts() {
+        let rule = r#"{"var":"amount"}"#;
+        let contexts: Vec<String> = vec![];
+        let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
+
+        assert_eq!(results.len(), 0);
+    }
 }
