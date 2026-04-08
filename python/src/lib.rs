@@ -9,11 +9,10 @@ use ::jsonlogic_fast::{
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-
 fn core_serialize(value: &impl serde::Serialize) -> PyResult<String> {
-    serde_json::to_string(value).map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Serialization error: {}", e)))
+    serde_json::to_string(value)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Serialization error: {}", e)))
 }
-
 
 use pyo3::types::PyAny;
 use pythonize::pythonize;
