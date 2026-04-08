@@ -45,7 +45,6 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    // Code Health Check: False-positive test. Code preserved.
     #[test]
     fn extract_f64_accepts_bool_and_null() {
         assert_eq!(extract_f64(Value::Bool(true)).unwrap(), 1.0);
@@ -81,4 +80,3 @@ mod tests {
 
 }
 
-// Code Health Check: False-positive test. Code preserved.

@@ -98,11 +98,10 @@ fn evaluate_batch_numeric_detailed(
 ) -> PyResult<(Vec<f64>, Vec<String>)> {
     let result = core_evaluate_batch_numeric_detailed(rule_json, &contexts_json).map_py_err()?;
 
-    let values = result.iter().map(|item| item.result).collect();
-    let errors = result
+    let (values, errors) = result
         .into_iter()
-        .map(|item| item.error.unwrap_or_default())
-        .collect();
+        .map(|item| (item.result, item.error.unwrap_or_default()))
+        .unzip();
 
     Ok((values, errors))
 }
