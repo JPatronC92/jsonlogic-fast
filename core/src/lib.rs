@@ -64,6 +64,16 @@ impl EvaluationResult {
             error: Some(error.into()),
         }
     }
+
+    fn into_numeric(self) -> RuleEngineResult<f64> {
+        match (self.result, self.error) {
+            (Some(result), None) => extract_f64(result),
+            (_, Some(error)) => Err(RuleEngineError::Evaluation(error)),
+            (None, None) => Err(RuleEngineError::Evaluation(
+                "Unknown evaluation failure".to_string(),
+            )),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -71,6 +81,21 @@ impl EvaluationResult {
 pub struct NumericEvaluationResult {
     pub result: f64,
     pub error: Option<String>,
+}
+
+impl From<RuleEngineResult<f64>> for NumericEvaluationResult {
+    fn from(res: RuleEngineResult<f64>) -> Self {
+        match res {
+            Ok(value) => Self {
+                result: value,
+                error: None,
+            },
+            Err(error) => Self {
+                result: 0.0,
+                error: Some(error.to_string()),
+            },
+        }
+    }
 }
 
 fn parse_rule(rule_json: &str) -> RuleEngineResult<Value> {
@@ -196,16 +221,7 @@ pub fn evaluate_batch_numeric(
 ) -> RuleEngineResult<Vec<f64>> {
     let results = evaluate_batch_detailed(rule_json, contexts_json)?;
 
-    results
-        .into_iter()
-        .map(|item| match (item.result, item.error) {
-            (Some(result), None) => extract_f64(result),
-            (_, Some(error)) => Err(RuleEngineError::Evaluation(error)),
-            (None, None) => Err(RuleEngineError::Evaluation(
-                "Unknown evaluation failure".to_string(),
-            )),
-        })
-        .collect()
+    results.into_iter().map(|item| item.into_numeric()).collect()
 
 }
 
@@ -217,26 +233,7 @@ pub fn evaluate_batch_numeric_detailed(
     let results = evaluate_batch_detailed(rule_json, contexts_json)?;
     Ok(results
         .into_iter()
-        .map(|item| match (item.result, item.error) {
-            (Some(result), None) => match extract_f64(result) {
-                Ok(value) => NumericEvaluationResult {
-                    result: value,
-                    error: None,
-                },
-                Err(error) => NumericEvaluationResult {
-                    result: 0.0,
-                    error: Some(error.to_string()),
-                },
-            },
-            (_, Some(error)) => NumericEvaluationResult {
-                result: 0.0,
-                error: Some(error),
-            },
-            (None, None) => NumericEvaluationResult {
-                result: 0.0,
-                error: Some("Unknown evaluation failure".to_string()),
-            },
-        })
+        .map(|item| item.into_numeric().into())
         .collect())
 }
 
