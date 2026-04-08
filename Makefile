@@ -1,6 +1,10 @@
 .PHONY: help setup test clippy lint bench bench-quick bench-python build-py build-wasm test-python test-wasm ci-local
 UV_CACHE_DIR ?= .uv-cache
 
+ifneq ($(words $(CURDIR)),1)
+$(warning "WARNING: The current directory path contains spaces. Some target tools (like wasm-bindgen / python venvs) might fail unpredictably due to bugged upstream handling of paths with spaces.")
+endif
+
 help:
 	@echo "Available targets:"
 	@echo "  setup       Build local Python bindings"
@@ -16,7 +20,7 @@ help:
 	@echo "  ci-local    Full local quality gate"
 
 setup:
-	cd python && UV_CACHE_DIR=$(abspath $(UV_CACHE_DIR)) uv run --with maturin maturin develop --release
+	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin maturin develop --release
 
 test:
 	cd core && cargo test --verbose
@@ -31,16 +35,16 @@ bench-quick:
 	cd core && cargo bench --bench bench -- --sample-size 10
 
 bench-python:
-	cd python && UV_CACHE_DIR=$(abspath $(UV_CACHE_DIR)) uv run --with maturin --with json-logic-qubit bash -c "maturin develop --release && python $(CURDIR)/benchmarks/compare.py"
+	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin --with json-logic-qubit bash -c "maturin develop --release && python '$(CURDIR)/benchmarks/compare.py'"
 
 build-py:
-	cd python && UV_CACHE_DIR=$(abspath $(UV_CACHE_DIR)) uv run --with maturin maturin build --release
+	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin maturin build --release
 
 build-wasm:
 	cd wasm && cargo check --target wasm32-unknown-unknown
 
 test-python:
-	cd python && UV_CACHE_DIR=$(abspath $(UV_CACHE_DIR)) uv run --with maturin --with pytest bash -c "maturin develop --release && pytest $(CURDIR)/tests/python/ -v"
+	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin --with pytest bash -c "maturin develop --release && pytest '$(CURDIR)/tests/python/' -v"
 
 test-wasm:
 	cd wasm && wasm-pack test --node

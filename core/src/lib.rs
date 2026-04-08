@@ -221,8 +221,10 @@ pub fn evaluate_batch_numeric(
 ) -> RuleEngineResult<Vec<f64>> {
     let results = evaluate_batch_detailed(rule_json, contexts_json)?;
 
-    results.into_iter().map(|item| item.into_numeric()).collect()
-
+    results
+        .into_iter()
+        .map(|item| item.into_numeric())
+        .collect()
 }
 
 /// Like [`evaluate_batch_numeric`] but returns [`NumericEvaluationResult`] with errors.
@@ -246,9 +248,6 @@ pub fn validate_rule(rule_json: &str) -> RuleEngineResult<bool> {
         .map(|_| true)
         .map_err(|error| RuleEngineError::Evaluation(format!("Rule validation failed: {error}")))
 }
-
-/// Serialize any `Serialize` implementor to a JSON string.
-
 
 /// Return engine metadata (version, parallelism mode, thread count).
 pub fn get_core_info() -> Value {
@@ -315,7 +314,6 @@ mod tests {
         let contexts = vec!["{}".to_string(), "{bad json}".to_string()];
 
         assert!(evaluate_batch_numeric(rule, &contexts).is_err());
-
     }
 
     #[test]
@@ -596,23 +594,28 @@ mod tests {
         assert_eq!(results[0].result, 10.0);
         assert_eq!(results[0].error, None);
         assert_eq!(results[1].result, 0.0);
-        assert!(results[1].error.as_ref().unwrap().contains("Numeric coercion error: String result is not a valid number"));
+        assert!(results[1]
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("Numeric coercion error: String result is not a valid number"));
     }
 
     #[test]
     fn evaluate_batch_numeric_detailed_context_error() {
         let rule = r#"{"var":"amount"}"#;
-        let contexts = vec![
-            r#"{"amount":10}"#.to_string(),
-            "{bad json}".to_string(),
-        ];
+        let contexts = vec![r#"{"amount":10}"#.to_string(), "{bad json}".to_string()];
         let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].result, 10.0);
         assert_eq!(results[0].error, None);
         assert_eq!(results[1].result, 0.0);
-        assert!(results[1].error.as_ref().unwrap().contains("Error parsing context"));
+        assert!(results[1]
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("Error parsing context"));
     }
 
     #[test]

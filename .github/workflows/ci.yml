@@ -69,7 +69,7 @@ jobs:
         with:
           version: "latest"
       - name: Build and test Python bindings
-        run: cd python && uv run --with maturin --with pytest bash -c "maturin develop --release && pytest $GITHUB_WORKSPACE/tests/python/ -v"
+        run: cd python && uv run --with maturin --with pytest bash -c "maturin develop --release && pytest \"$GITHUB_WORKSPACE/tests/python/\" -v"
 
   test-wasm:
     name: WASM runtime tests

@@ -8,12 +8,12 @@ use jsonlogic_fast::{
 };
 use wasm_bindgen::prelude::*;
 
-
-fn core_serialize(value: &impl serde::Serialize) -> Result<String, jsonlogic_fast::error::RuleEngineError> {
-    serde_json::to_string(value).map_err(|e| jsonlogic_fast::error::RuleEngineError::Serialization(e.to_string()))
+fn core_serialize(
+    value: &impl serde::Serialize,
+) -> Result<String, jsonlogic_fast::error::RuleEngineError> {
+    serde_json::to_string(value)
+        .map_err(|e| jsonlogic_fast::error::RuleEngineError::Serialization(e.to_string()))
 }
-
-
 
 fn js_error(message: impl Into<String>) -> JsValue {
     JsValue::from_str(&message.into())

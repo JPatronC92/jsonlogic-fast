@@ -1,0 +1,36 @@
+[INFO]: 🎯  Checking for the Wasm target...
+   Compiling rustversion v1.0.22
+   Compiling serde_core v1.0.228
+   Compiling wasm-bindgen v0.2.117
+   Compiling js-sys v0.3.94
+   Compiling serde_json v1.0.149
+   Compiling serde v1.0.228
+   Compiling jsonlogic v0.5.1
+   Compiling jsonlogic-fast v0.1.1 (/home/jpatron92/Escritorio/Carpeta sin título/jsonlogic-fast/core)
+   Compiling jsonlogic-fast-wasm v0.1.1 (/home/jpatron92/Escritorio/Carpeta sin título/jsonlogic-fast/wasm)
+   Compiling wasm-bindgen-futures v0.4.67
+   Compiling wasm-bindgen-test v0.3.67
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.25s
+[INFO]: ⬇️  Installing wasm-bindgen...
+   Compiling wasm-bindgen v0.2.117
+   Compiling js-sys v0.3.94
+   Compiling jsonlogic-fast-wasm v0.1.1 (/home/jpatron92/Escritorio/Carpeta sin título/jsonlogic-fast/wasm)
+   Compiling wasm-bindgen-futures v0.4.67
+   Compiling wasm-bindgen-test v0.3.67
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.64s
+     Running unittests src/lib.rs (/home/jpatron92/Escritorio/Carpeta sin título/jsonlogic-fast/target/wasm32-unknown-unknown/debug/deps/jsonlogic_fast_wasm-b0e45cec1aafcd23.wasm)
+no tests to run!
+     Running tests/wasm_tests.rs (/home/jpatron92/Escritorio/Carpeta sin título/jsonlogic-fast/target/wasm32-unknown-unknown/debug/deps/wasm_tests-ad5f525b157ec29e.wasm)
+Error: failed to find or execute Node.js
+
+Caused by:
+    No such file or directory (os error 2)
+error: test failed, to rerun pass `--test wasm_tests`
+
+Caused by:
+  process didn't exit successfully: `/home/jpatron92/.cache/.wasm-pack/wasm-bindgen-8a74166b323833fc/wasm-bindgen-test-runner '/home/jpatron92/Escritorio/Carpeta sin título/jsonlogic-fast/target/wasm32-unknown-unknown/debug/deps/wasm_tests-ad5f525b157ec29e.wasm'` (exit status: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+Error: Running Wasm tests with wasm-bindgen-test failed
+Caused by: Running Wasm tests with wasm-bindgen-test failed
+Caused by: failed to execute `cargo test`: exited with exit status: 1
+  full command: cd "/home/jpatron92/Escritorio/Carpeta sin título/jsonlogic-fast/wasm" && CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER="/home/jpatron92/.cache/.wasm-pack/wasm-bindgen-8a74166b323833fc/wasm-bindgen-test-runner" WASM_BINDGEN_TEST_ONLY_NODE="1" "cargo" "test" "--target" "wasm32-unknown-unknown"

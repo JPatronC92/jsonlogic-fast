@@ -32,14 +32,6 @@ pub fn extract_f64(result: Value) -> RuleEngineResult<f64> {
     }
 }
 
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,7 +52,6 @@ mod tests {
             matches!(error, RuleEngineError::NumericCoercion(ref msg) if !msg.contains("secret")),
             "Expected NumericCoercion without sensitive data, but the error either had the wrong type or exposed the secret."
         );
-
     }
 
     #[test]
@@ -77,6 +68,4 @@ mod tests {
             Err(RuleEngineError::NumericCoercion(_))
         ));
     }
-
 }
-
