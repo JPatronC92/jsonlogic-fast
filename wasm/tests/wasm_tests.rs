@@ -129,3 +129,58 @@ fn determinism_batch_matches_individual() {
     assert_eq!(format!("\"{}\"", batch[0]), individual_1);
     assert_eq!(format!("\"{}\"", batch[1]), individual_2);
 }
+
+#[wasm_bindgen_test]
+fn evaluate_batch_detailed_mixed_results() {
+    let rule = r#"{"var":"x"}"#;
+    // Note: The WASM wrapper parses contexts_json as a whole first,
+    // so individual contexts are always valid JSON when they reach the core.
+    let contexts = r#"[{"x":10},{},{"x":null}]"#;
+    let result = evaluate_batch_detailed_wasm(rule, contexts).unwrap();
+    let parsed: Vec<serde_json::Value> = serde_json::from_str(&result).unwrap();
+
+    assert_eq!(parsed.len(), 3);
+
+    // Context 1: Success
+    assert_eq!(parsed[0]["result"], 10.0);
+    assert!(parsed[0]["error"].is_null());
+
+    // Context 2: Missing variable (returns null)
+    assert!(parsed[1]["result"].is_null());
+    assert!(parsed[1]["error"].is_null());
+
+    // Context 3: Explicit null
+    assert!(parsed[2]["result"].is_null());
+    assert!(parsed[2]["error"].is_null());
+}
+
+#[wasm_bindgen_test]
+fn evaluate_batch_numeric_detailed_mixed_results() {
+    let rule = r#"{"if":[{"==":[{"var":"type"},"good"]},10,"bad_result"]}"#;
+    let contexts = r#"[{"type":"good"},{"type":"bad"}]"#;
+    let result = evaluate_batch_numeric_detailed_wasm(rule, contexts).unwrap();
+    let parsed: Vec<serde_json::Value> = serde_json::from_str(&result).unwrap();
+
+    assert_eq!(parsed.len(), 2);
+
+    // Context 1: Success
+    assert_eq!(parsed[0]["result"], 10.0);
+    assert!(parsed[0]["error"].is_null());
+
+    // Context 2: Coercion error
+    assert_eq!(parsed[1]["result"], 0.0);
+    assert!(parsed[1]["error"].is_string());
+    assert!(parsed[1]["error"]
+        .as_str()
+        .unwrap()
+        .contains("Numeric coercion error"));
+}
+
+#[wasm_bindgen_test]
+fn evaluate_batch_detailed_invalid_contexts_json() {
+    let rule = r#"{"var":"x"}"#;
+    let contexts = r#"[{"x":10}, invalid]"#;
+    let result = evaluate_batch_detailed_wasm(rule, contexts);
+
+    assert!(result.is_err());
+}
