@@ -256,3 +256,34 @@ class TestDeterminism:
         batch = jsonlogic_fast.evaluate_batch(CONDITIONAL_RULE, contexts)
         individual = [jsonlogic_fast.evaluate(CONDITIONAL_RULE, c) for c in contexts]
         assert batch == individual
+
+def test_compiled_rule():
+    from jsonlogic_fast import CompiledRule
+    rule = CompiledRule('{"==": [{"var": "a"}, 1]}')
+    assert rule.evaluate('{"a": 1}') is True
+    assert rule.evaluate('{"a": 2}') is False
+
+    batch_result = rule.evaluate_batch(['{"a": 1}', '{"a": 2}'])
+    assert batch_result == [True, False]
+
+def test_evaluate_batch_strict():
+    from jsonlogic_fast import evaluate_batch_strict
+    import pytest
+
+    # Success case
+    assert evaluate_batch_strict('{"==": [{"var": "a"}, 1]}', ['{"a": 1}', '{"a": 2}']) == [True, False]
+
+    # Failure case
+    with pytest.raises(ValueError):
+        evaluate_batch_strict('{"==": [{"var": "a"}, 1]}', ['{"a": 1}', 'invalid json'])
+
+def test_evaluate_batch_numeric_strict():
+    from jsonlogic_fast import evaluate_batch_numeric_strict
+    import pytest
+
+    # Success case
+    assert evaluate_batch_numeric_strict('{"var": "a"}', ['{"a": 1}', '{"a": 2}']) == [1.0, 2.0]
+
+    # Failure case
+    with pytest.raises(ValueError):
+        evaluate_batch_numeric_strict('{"var": "a"}', ['{"a": 1}', '{"a": "not a number"}'])

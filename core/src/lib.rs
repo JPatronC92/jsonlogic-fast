@@ -176,7 +176,40 @@ fn available_threads() -> usize {
     1
 }
 
-/// Evaluate a JSON-Logic rule against a single JSON context.
+/// A pre-parsed JSON-Logic rule that can be evaluated multiple times efficiently.
+#[derive(Debug, Clone)]
+pub struct CompiledRule {
+    pub rule: Value,
+}
+
+impl CompiledRule {
+    /// Create a new CompiledRule by parsing a JSON string.
+    pub fn new(rule_json: &str) -> RuleEngineResult<Self> {
+        let rule = parse_rule(rule_json)?;
+        Ok(Self { rule })
+    }
+
+    /// Evaluate the compiled rule against a JSON context string.
+    pub fn evaluate(&self, context_json: &str) -> RuleEngineResult<Value> {
+        let context = parse_context(context_json)?;
+        apply_rule(&self.rule, &context)
+    }
+
+    /// Evaluate the compiled rule against a pre-parsed serde_json::Value context.
+    pub fn evaluate_value(&self, context: &Value) -> RuleEngineResult<Value> {
+        apply_rule(&self.rule, context)
+    }
+
+    /// Evaluate the compiled rule against a batch of JSON context strings.
+    pub fn evaluate_batch(&self, contexts_json: &[String]) -> RuleEngineResult<Vec<Value>> {
+        Ok(map_contexts(contexts_json, |context_json| {
+            evaluate_context(&self.rule, context_json)
+                .result
+                .unwrap_or(Value::Null)
+        }))
+    }
+}
+
 pub fn evaluate(rule_json: &str, context_json: &str) -> RuleEngineResult<Value> {
     let rule = parse_rule(rule_json)?;
     let context = parse_context(context_json)?;
@@ -240,6 +273,39 @@ pub fn evaluate_batch_numeric_detailed(
 }
 
 /// Validate that a rule can be evaluated without errors.
+pub fn evaluate_batch_strict(
+    rule_json: &str,
+    contexts_json: &[String],
+) -> RuleEngineResult<Vec<Value>> {
+    let rule = parse_rule(rule_json)?;
+    let mut results = Vec::with_capacity(contexts_json.len());
+
+    // Fall back to sequential loop to propagate errors simply,
+    // or use par_bridge/try_fold in future if Rayon is required here.
+    for context_json in contexts_json {
+        let context = parse_context(context_json)?;
+        let result = apply_rule(&rule, &context)?;
+        results.push(result);
+    }
+
+    Ok(results)
+}
+
+/// Like [`evaluate_batch_numeric`] but returns an error immediately if any context fails.
+pub fn evaluate_batch_numeric_strict(
+    rule_json: &str,
+    contexts_json: &[String],
+) -> RuleEngineResult<Vec<f64>> {
+    let results = evaluate_batch_strict(rule_json, contexts_json)?;
+
+    let mut numeric_results = Vec::with_capacity(results.len());
+    for result in results {
+        numeric_results.push(extract_f64(result)?);
+    }
+
+    Ok(numeric_results)
+}
+
 pub fn validate_rule(rule_json: &str) -> RuleEngineResult<bool> {
     let rule = parse_rule(rule_json)?;
     let context = default_validation_context();
@@ -638,5 +704,58 @@ mod tests {
         let results = evaluate_batch_numeric_detailed(rule, &contexts).unwrap();
 
         assert_eq!(results.len(), 0);
+    }
+}
+
+#[cfg(test)]
+mod tests_strict_and_compiled {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_compiled_rule() {
+        let rule = CompiledRule::new(r#"{"==": [{"var": "a"}, 1]}"#).unwrap();
+        assert_eq!(rule.evaluate(r#"{"a": 1}"#).unwrap(), json!(true));
+        assert_eq!(rule.evaluate_value(&json!({"a": 2})).unwrap(), json!(false));
+
+        let batch_result = rule
+            .evaluate_batch(&[r#"{"a": 1}"#.to_string(), r#"{"a": 2}"#.to_string()])
+            .unwrap();
+        assert_eq!(batch_result, vec![json!(true), json!(false)]);
+    }
+
+    #[test]
+    fn test_evaluate_batch_strict_success() {
+        let rule = r#"{"==": [{"var": "a"}, 1]}"#;
+        let contexts = vec![r#"{"a": 1}"#.to_string(), r#"{"a": 2}"#.to_string()];
+        let results = evaluate_batch_strict(rule, &contexts).unwrap();
+        assert_eq!(results, vec![json!(true), json!(false)]);
+    }
+
+    #[test]
+    fn test_evaluate_batch_strict_failure() {
+        let rule = r#"{"==": [{"var": "a"}, 1]}"#;
+        let contexts = vec![r#"{"a": 1}"#.to_string(), "invalid json".to_string()];
+        let result = evaluate_batch_strict(rule, &contexts);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_evaluate_batch_numeric_strict_success() {
+        let rule = r#"{"var": "a"}"#;
+        let contexts = vec![r#"{"a": 1}"#.to_string(), r#"{"a": "2"}"#.to_string()];
+        let results = evaluate_batch_numeric_strict(rule, &contexts).unwrap();
+        assert_eq!(results, vec![1.0, 2.0]);
+    }
+
+    #[test]
+    fn test_evaluate_batch_numeric_strict_failure() {
+        let rule = r#"{"var": "a"}"#;
+        let contexts = vec![
+            r#"{"a": 1}"#.to_string(),
+            r#"{"a": "not a number"}"#.to_string(),
+        ];
+        let result = evaluate_batch_numeric_strict(rule, &contexts);
+        assert!(result.is_err());
     }
 }
