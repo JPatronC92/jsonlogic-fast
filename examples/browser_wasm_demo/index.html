@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSONLogic Fast WASM Demo</title>
+    <style>
+      body { font-family: system-ui; max-width: 800px; margin: 2rem auto; }
+      textarea { width: 100%; height: 100px; margin-bottom: 1rem; font-family: monospace; }
+      .result { padding: 1rem; background: #eee; font-family: monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>🚀 jsonlogic-fast WASM Demo</h1>
+
+    <h3>Rule</h3>
+    <textarea id="rule">{"if": [{">": [{"var": "score"}, 70]}, "Pass", "Fail"]}</textarea>
+
+    <h3>Context</h3>
+    <textarea id="context">{"score": 85}</textarea>
+
+    <button id="eval-btn">Evaluate</button>
+
+    <h3>Result</h3>
+    <div id="result" class="result">Waiting...</div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -4,15 +4,22 @@
 [![docs.rs](https://docs.rs/jsonlogic-fast/badge.svg)](https://docs.rs/jsonlogic-fast)
 [![CI](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml/badge.svg)](https://github.com/JPatronC92/jsonlogic-fast/actions/workflows/ci.yml)
 
-**Fast, embeddable, cross-runtime JSON-Logic evaluation.**
+**Fast deterministic JSON-Logic evaluation for policy engines, feature flags, risk scoring, compliance rules, and AI guardrails — from Rust, Python, and WASM.**
 
-## Why
+`jsonlogic-fast` is a production-grade wrapper around the highly-compliant [`jsonlogic-rs`](https://crates.io/crates/jsonlogic) crate, offering bindings that are significantly faster than native Python or JS equivalents.
 
-- **Rust core** — zero-overhead evaluation with strong type safety
-- **Python bindings** — native speed via PyO3, no subprocess overhead
-- **WASM bindings** — run in browsers and Node.js, same deterministic results
-- **Parallel batch** — Rayon-powered multi-threaded evaluation on native platforms
-- **Deterministic** — same rule + same data = same result, always
+## When to use this
+
+* **Fraud / Risk Scoring Engine:** You need to evaluate millions of transactions per second against dynamic JSON rules.
+* **Feature Flagging:** You have complex targeting rules that need to be evaluated synchronously without network latency.
+* **Multi-Platform Consistency:** You need the exact same rule to evaluate identically on your Rust backend, your Python data pipeline, and your user's browser (WASM).
+* **AI Guardrails:** You want deterministic, programmatic checks on LLM JSON outputs before accepting them.
+
+## Why not just use pure Python?
+
+Pure Python implementations (like `json-logic-qubit`) are fine for simple scripts, but they suffer from interpreter overhead, GC pauses, and poor parallelism. `jsonlogic-fast` drops down to native Rust, parsing and executing your rules with zero Python overhead. Using our `CompiledRule.evaluate_batch` API, you can parallelize evaluation across all CPU cores instantly, achieving **up to 10-50x speedups**.
+
+See [BENCHMARKS.md](BENCHMARKS.md) for detailed performance stats.
 
 ## Install
 
@@ -29,111 +36,68 @@ jsonlogic-fast = "0.1"
 pip install jsonlogic-fast
 ```
 
+### WASM
+
+```bash
+npm install jsonlogic-fast-wasm
+```
+
 ## Quick Start
+
+### Python: The "Compiled" API for Production
+
+Parse once, evaluate many times natively.
+
+```python
+import json
+from jsonlogic_fast import CompiledRule
+
+rule = CompiledRule('{"if": [{">": [{"var": "score"}, 700]}, "approve", "review"]}')
+
+# Single eval
+print(rule.evaluate('{"score": 742}')) # 'approve'
+
+# Parallel batch eval (utilizes all CPU cores automatically)
+contexts = ['{"score": 742}', '{"score": 600}']
+print(rule.evaluate_batch(contexts)) # ['approve', 'review']
+```
 
 ### Rust
 
 ```rust
-use jsonlogic_fast::evaluate;
+use jsonlogic_fast::CompiledRule;
+use serde_json::json;
 
-let rule = r#"{"if":[{">":[{"var":"score"},700]},"approve","review"]}"#;
-let context = r#"{"score":742}"#;
-let result = evaluate(rule, context).unwrap();
-// result == json!("approve")
-```
-
-### Python
-
-```python
-import json
-import jsonlogic_fast
-
-rule = json.dumps({">": [{"var": "score"}, 700]})
-ctx = json.dumps({"score": 742})
-
-result = jsonlogic_fast.evaluate(rule, ctx)  # True
+let rule = CompiledRule::new(r#"{"if":[{">":[{"var":"score"},700]},"approve","review"]}"#).unwrap();
+let result = rule.evaluate_value(&json!({"score": 742})).unwrap();
+assert_eq!(result, json!("approve"));
 ```
 
 ### JavaScript (WASM)
 
 ```javascript
-import { evaluate_wasm } from "jsonlogic-fast-wasm";
+import init, { CompiledRule } from "jsonlogic-fast-wasm";
 
-const result = evaluate_wasm(
-  '{">":[{"var":"score"},700]}',
-  '{"score":742}'
-);
-// result == "true"
+await init();
+
+const rule = new CompiledRule('{"if": [{">": [{"var": "score"}, 700]}, "approve", "review"]}');
+const result = rule.evaluate('{"score": 742}');
+console.log(result); // "approve"
 ```
 
-## API
+## API Features
 
-| Function | Return | Description |
-|---|---|---|
-| `evaluate` | `Value` | Evaluate rule against context |
-| `evaluate_numeric` | `f64` | Evaluate and coerce to number |
-| `evaluate_batch` | `Vec<Value>` | Parallel evaluation of N contexts |
-| `evaluate_batch_detailed` | `Vec<EvaluationResult>` | Batch with per-item error info |
-| `evaluate_batch_numeric` | `Vec<f64>` | Batch numeric with fail-safe zeros |
-| `evaluate_batch_numeric_detailed` | `Vec<NumericEvaluationResult>` | Batch numeric with errors |
-| `validate_rule` | `bool` | Preflight rule validation |
-| `serialize` | `String` | JSON serialization |
-| `get_core_info` | `Value` | Engine metadata |
+| Feature | Description |
+|---|---|
+| `CompiledRule` | Parses a rule string once into a native memory representation for fast repeated evaluations. |
+| `evaluate_batch` | Evaluates an array of contexts against a rule in parallel (Rayon on native). Lossy (returns null for bad contexts). |
+| `evaluate_batch_strict` | Batch evaluation that immediately halts and returns an Error if any context is invalid or fails evaluation. |
+| `evaluate_numeric` | Evaluates and coerces the result safely to a Float (`f64`), useful for scoring. |
 
-## Benchmarks
+## Compatibility & Limitations
 
-```bash
-make bench          # full Criterion benchmarks
-make bench-quick    # reduced sample for quick feedback
-```
-
-Included benchmarks:
-- Single numeric evaluation
-- Single generic (conditional) evaluation
-- Batch numeric evaluation (10K contexts)
-
-## Performance
-
-`jsonlogic-fast` wraps the [jsonlogic-rs](https://crates.io/crates/jsonlogic) crate
-in a Rust core compiled to native code, exposed to Python via PyO3 and to browsers via
-WASM. The "fast" comes from:
-
-- **Zero Python overhead** — rule parsing, evaluation, and serialization happen entirely in Rust.
-- **Parallel batch evaluation** — Rayon distributes N contexts across all available CPU cores.
-- **Single parse, many evaluations** — `evaluate_batch` parses the rule once and reuses it.
-
-### Python: jsonlogic-fast vs json-logic-qubit (pure Python)
-
-| Scenario | jsonlogic-fast | json-logic-qubit | Speedup |
-|---|---|---|---|
-| Simple comparison | 0.001 ms | 0.004 ms | **3.6x** |
-| Conditional (nested if) | 0.003 ms | 0.011 ms | **4.0x** |
-| Complex (logic + arithmetic + var paths) | 0.005 ms | 0.025 ms | **4.7x** |
-| Batch 10K contexts | 5.3 ms | 51.4 ms (sequential loop) | **9.7x** |
-
-> Run `make bench-python` to reproduce. Run `make bench` for Criterion (Rust) benchmarks.
-
-### Rust (Criterion)
-
-```bash
-make bench          # full Criterion benchmarks (HTML reports in target/criterion/)
-make bench-quick    # reduced sample for quick feedback
-```
-
-## Development
-
-```bash
-make test           # core Rust tests (11)
-make test-python    # Python e2e tests (29)
-make test-wasm      # WASM runtime tests (15)
-make ci-local       # full quality gate
-```
+We implement the full JSONLogic specification. See [COMPATIBILITY.md](COMPATIBILITY.md) for an operator support matrix and edge-case behavior (e.g. floats and strict equality).
 
 ## License
 
-Licensed under either of
-
-- [MIT license](LICENSE-MIT)
-- [Apache License, Version 2.0](LICENSE-APACHE)
-
-at your option.
+MIT or Apache 2.0.
