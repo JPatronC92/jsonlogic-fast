@@ -24,7 +24,7 @@ jobs:
           command: sdist
           args: --out dist
           working-directory: python
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: python/dist/*.tar.gz
@@ -63,7 +63,7 @@ jobs:
           args: --release --out dist
           working-directory: python
           manylinux: auto
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheel-${{ matrix.target }}
           path: python/dist/*.whl
