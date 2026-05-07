@@ -1,52 +1,35 @@
-.PHONY: help setup test clippy lint bench bench-quick bench-python build-py build-wasm test-python test-wasm ci-local
-UV_CACHE_DIR ?= .uv-cache
-
-ifneq ($(words $(CURDIR)),1)
-$(warning "WARNING: The current directory path contains spaces. Some target tools (like wasm-bindgen / python venvs) might fail unpredictably due to bugged upstream handling of paths with spaces.")
-endif
-
-help:
-	@echo "Available targets:"
-	@echo "  setup       Build local Python bindings"
-	@echo "  test        Run core Rust tests"
-	@echo "  clippy      Run Rust linter with strict warnings"
-	@echo "  bench       Run Criterion benchmarks"
-	@echo "  bench-quick Run reduced benchmarks"
-	@echo "  bench-python Compare jsonlogic-fast vs json-logic-py"
-	@echo "  build-py    Build Python wheel"
-	@echo "  build-wasm  Check WASM compilation"
-	@echo "  test-python Build + run Python e2e tests"
-	@echo "  test-wasm   Run WASM runtime tests in Node.js"
-	@echo "  ci-local    Full local quality gate"
+.PHONY: setup test test-python test-wasm bench bench-quick bench-python ci fmt clippy build-py
 
 setup:
-	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin maturin develop --release
+	cargo check
+	python3 -m pip install uv
+	uv pip install -e ./python
 
 test:
-	cd core && cargo test --verbose
-
-clippy:
-	cargo clippy --all-targets --manifest-path Cargo.toml -- -D warnings
-
-bench:
-	cd core && cargo bench --bench bench
-
-bench-quick:
-	cd core && cargo bench --bench bench -- --sample-size 10
-
-bench-python:
-	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin --with json-logic-qubit bash -c "maturin develop --release && python '$(CURDIR)/benchmarks/compare.py'"
-
-build-py:
-	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin maturin build --release
-
-build-wasm:
-	cd wasm && cargo check --target wasm32-unknown-unknown
+	cargo test --workspace
 
 test-python:
-	cd python && UV_CACHE_DIR="$(abspath $(UV_CACHE_DIR))" uv run --with maturin --with pytest bash -c "maturin develop --release && pytest '$(CURDIR)/tests/python/' -v"
+	uv run --with maturin --with pytest bash -c "cd python && maturin develop --release && pytest ../tests/python/ -v"
 
 test-wasm:
 	cd wasm && wasm-pack test --node
 
-ci-local: test clippy test-python test-wasm bench-quick
+bench:
+	cargo bench --manifest-path core/Cargo.toml
+
+bench-quick:
+	cargo bench --manifest-path core/Cargo.toml --bench bench -- --sample-size 10
+
+bench-python:
+	uv run --with maturin bash -c "python3 benchmarks/python_bench.py"
+
+fmt:
+	cargo fmt --all
+
+clippy:
+	cargo clippy --workspace --all-targets -- -D warnings
+
+build-py:
+	uv run --with maturin bash -c "cd python && maturin build --release"
+
+ci: fmt clippy test test-python test-wasm
