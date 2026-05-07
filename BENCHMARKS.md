@@ -28,7 +28,7 @@ The API provides three ways to evaluate rules, each progressively faster:
 | `CompiledRule` loop | ~2.2 ms | ~22 ms | ~220 ms |
 | `CompiledRule.evaluate_batch` | **~0.6 ms** | **~3.5 ms** | **~25 ms** |
 
-By using `CompiledRule` and `evaluate_batch`, you can achieve a **5x to 10x throughput increase** compared to simple sequential evaluation. When compared to pure Python alternatives, the gap widens to up to **50x** for complex numeric and conditional intensive workloads.
+By using `CompiledRule` and `evaluate_batch`, you can achieve significant speedups. Exact benchmark results depend on rule shape, batch size, hardware, and runtime. In favorable conditions against pure Python alternatives, the gap can be substantial.
 
 ## Rust Performance (Criterion)
 

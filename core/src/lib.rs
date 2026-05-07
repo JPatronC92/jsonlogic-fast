@@ -2,7 +2,7 @@
 //!
 //! **Fast, embeddable, cross-runtime JSON-Logic evaluation.**
 //!
-//! Implements the full [JsonLogic](https://jsonlogic.com/) specification with
+//! Implements broad [JsonLogic](https://jsonlogic.com/) specification coverage with
 //! batch evaluation, numeric coercion, and parallel execution via Rayon
 //! (sequential on WASM).
 //!
@@ -179,7 +179,7 @@ fn available_threads() -> usize {
 /// A pre-parsed JSON-Logic rule that can be evaluated multiple times efficiently.
 #[derive(Debug, Clone)]
 pub struct CompiledRule {
-    pub rule: Value,
+    rule: Value,
 }
 
 impl CompiledRule {
