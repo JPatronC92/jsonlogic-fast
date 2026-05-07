@@ -2,36 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [0.1.1] — 2026-04-05
+## [Unreleased] - 2024-05-06
 
 ### Added
-- 27 comprehensive Rust core tests (nested var paths, recursive if, all data types,
-  arithmetic, comparison, logical short-circuit, array ops, between, complex rules)
-- Python comparative benchmark (`benchmarks/compare.py`) vs json-logic-qubit
-- `make bench-python` target
-- Performance section in README with real benchmark results
-- `CONTRIBUTING.md`
-- PyPI publish workflow (`publish-pypi.yml`)
-
-### Fixed
-- Duplicated doc-comments in `core/src/lib.rs`
-- Duplicated badge lines in `README.md`
-- Workspace repository/homepage URLs pointing to wrong repo
-
-## [0.1.0] — 2026-04-04
-
-### Added
-
-- Core JSON-Logic evaluator (`jsonlogic-fast` crate)
-- Single and batch evaluation with parallel processing (Rayon)
-- Numeric coercion and type extraction utilities
-- Python bindings via PyO3 (`jsonlogic-fast-python`)
-- WASM bindings via wasm-bindgen (`jsonlogic-fast-wasm`)
-- Criterion benchmarks (single, generic, batch 10K)
-- GitHub Actions CI (fmt, clippy, test, audit, deny, Python e2e, WASM runtime, bench smoke)
-- `cargo-deny` policy for license and advisory checks
-- 55 tests: 11 Rust core + 29 Python e2e + 15 WASM runtime
-- Dual MIT/Apache-2.0 license
+- **`CompiledRule` API:** A new native object that parses JSON rules once and allows high-performance repeated evaluations. Exposed in Rust, Python, and WASM.
+- **Strict Batch Variants:** Added `evaluate_batch_strict` and `evaluate_batch_numeric_strict` to fail fast on errors, complementing the default fault-tolerant batch methods.
+- **Compliance Suite:** Integrated full JSONLogic specification compliance tests and Property-Based Testing (fuzzing) using `proptest`.
+- **Examples:** Added `fraud_scoring.rs`, `feature_flags.rs`, `credit_eligibility.py`, and a full Vite-based `browser_wasm_demo/`.
+- **Documentation:** Added `BENCHMARKS.md`, `COMPATIBILITY.md`, `SECURITY.md`, and completely rewrote `README.md` for production readiness.

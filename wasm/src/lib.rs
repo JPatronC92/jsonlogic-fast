@@ -3,8 +3,10 @@ use jsonlogic_fast::{
     evaluate_batch_detailed as core_evaluate_batch_detailed,
     evaluate_batch_numeric as core_evaluate_batch_numeric,
     evaluate_batch_numeric_detailed as core_evaluate_batch_numeric_detailed,
-    evaluate_numeric as core_evaluate_numeric, get_core_info as core_get_core_info,
-    validate_rule as core_validate_rule,
+    evaluate_batch_numeric_strict as core_evaluate_batch_numeric_strict,
+    evaluate_batch_strict as core_evaluate_batch_strict, evaluate_numeric as core_evaluate_numeric,
+    get_core_info as core_get_core_info, validate_rule as core_validate_rule,
+    CompiledRule as CoreCompiledRule,
 };
 use wasm_bindgen::prelude::*;
 
@@ -104,6 +106,70 @@ pub fn evaluate_batch_numeric_detailed_wasm(
         .map_js_err()?;
     let result =
         core_evaluate_batch_numeric_detailed(rule_json, &serialized_contexts).map_js_err()?;
+    core_serialize(&result).map_js_err()
+}
+
+#[wasm_bindgen]
+pub struct CompiledRule {
+    core_rule: CoreCompiledRule,
+}
+
+#[wasm_bindgen]
+impl CompiledRule {
+    #[wasm_bindgen(constructor)]
+    pub fn new(rule_json: &str) -> Result<CompiledRule, JsValue> {
+        let core_rule = CoreCompiledRule::new(rule_json).map_js_err()?;
+        Ok(CompiledRule { core_rule })
+    }
+
+    pub fn evaluate(&self, context_json: &str) -> Result<String, JsValue> {
+        let result = self.core_rule.evaluate(context_json).map_js_err()?;
+        core_serialize(&result).map_js_err()
+    }
+
+    pub fn evaluate_batch(&self, contexts_json: &str) -> Result<String, JsValue> {
+        let contexts: Vec<serde_json::Value> =
+            serde_json::from_str(contexts_json).map_js_err_with_prefix("Contexts parse error")?;
+        let serialized_contexts = contexts
+            .iter()
+            .map(core_serialize)
+            .collect::<Result<Vec<_>, _>>()
+            .map_js_err()?;
+        let result = self
+            .core_rule
+            .evaluate_batch(&serialized_contexts)
+            .map_js_err()?;
+        core_serialize(&result).map_js_err()
+    }
+}
+
+#[wasm_bindgen]
+pub fn evaluate_batch_strict_wasm(rule_json: &str, contexts_json: &str) -> Result<String, JsValue> {
+    let contexts: Vec<serde_json::Value> =
+        serde_json::from_str(contexts_json).map_js_err_with_prefix("Contexts parse error")?;
+    let serialized_contexts = contexts
+        .iter()
+        .map(core_serialize)
+        .collect::<Result<Vec<_>, _>>()
+        .map_js_err()?;
+    let result = core_evaluate_batch_strict(rule_json, &serialized_contexts).map_js_err()?;
+    core_serialize(&result).map_js_err()
+}
+
+#[wasm_bindgen]
+pub fn evaluate_batch_numeric_strict_wasm(
+    rule_json: &str,
+    contexts_json: &str,
+) -> Result<String, JsValue> {
+    let contexts: Vec<serde_json::Value> =
+        serde_json::from_str(contexts_json).map_js_err_with_prefix("Contexts parse error")?;
+    let serialized_contexts = contexts
+        .iter()
+        .map(core_serialize)
+        .collect::<Result<Vec<_>, _>>()
+        .map_js_err()?;
+    let result =
+        core_evaluate_batch_numeric_strict(rule_json, &serialized_contexts).map_js_err()?;
     core_serialize(&result).map_js_err()
 }
 
