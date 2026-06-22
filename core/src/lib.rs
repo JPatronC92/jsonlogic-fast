@@ -759,3 +759,6 @@ mod tests_strict_and_compiled {
         assert!(result.is_err());
     }
 }
+
+// B2A modules
+pub mod b2a;

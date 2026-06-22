@@ -1,0 +1,23 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+siwe = "0.6" # SIWE verification
+hex = "0.4"
+time = "0.3"
+jsonlogic-fast = { path = "../core" }
+lambda_http = "0.13"
+
+[[bin]]
+name = "api_server"
+path = "src/bin/api_server.rs"
+
+[[bin]]
+name = "lambda"
+path = "src/bin/lambda.rs"
