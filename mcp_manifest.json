@@ -1,0 +1,20 @@
+{
+  "name": "jsonlogic-fast-b2a",
+  "version": "0.1.0",
+  "description": "JSONLogic Serverless API with crypto payments for Agents",
+  "capabilities": {
+    "evaluation": {
+      "estimate": "/v1/estimate",
+      "evaluate": "/v1/evaluate"
+    }
+  },
+  "authentication": {
+    "type": "siwe",
+    "description": "Sign-In with Ethereum EIP-4361"
+  },
+  "payment": {
+    "type": "x402",
+    "network": "base",
+    "token": "USDC"
+  }
+}
