@@ -397,17 +397,4 @@ async fn test_nonce_cleanup_smoke() {
     assert!(ok3);
 }
 
-// Exercise DynamoStorage hardening paths (real shipped code). In no-AWS env, new may fail but functions invoked.
-#[tokio::test]
-async fn test_dynamo_hardening_paths() {
-    // Use the real DynamoStorage type and call the hardening methods (nonce, balance, rate).
-    // This drives the Dynamo impl even if AWS config fails (the fn bodies are executed on the real shipped type).
-    let dyn_store = DynamoStorage::new("B2A_Balances", "B2A_Nonces").await;
-    let _ = dyn_store.check_and_record_nonce("0xtest", "nonce-d1").await;
-    let _ = dyn_store.get_balance("0xtest").await;
-    let _ = dyn_store.check_and_record_request("0xtest", 60, 10).await;
-    let _ = dyn_store.add_balance("0xtest", U256::from(100u64)).await;
-    let _ = dyn_store.deduct_balance("0xtest", U256::from(50u64)).await;
-    // Always pass; construction + calls exercise the real DynamoStorage hardening code even on error paths
-    assert!(true);
-}
+
