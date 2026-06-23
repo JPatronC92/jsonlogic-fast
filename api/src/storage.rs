@@ -204,12 +204,7 @@ impl DynamoStorage {
         match result {
             Ok(_) => Ok(true),
             Err(e) => {
-                let err_msg = format!("{:?}", e);
-                if err_msg.contains("ConditionalCheckFailedException") {
-                    Ok(false)
-                } else {
-                    Err(format!("DynamoDB error: {}", err_msg))
-                }
+                crate::hardening::interpret_nonce_put(&format!("{:?}", e))
             }
         }
     }
@@ -222,20 +217,8 @@ impl DynamoStorage {
             .await
             .map_err(|e| format!("DynamoDB get error: {:?}", e))?;
 
-        if let Some(item) = result.item {
-            if let Some(AttributeValue::S(bal_str)) = item.get("balance") {
-                return U256::from_str(bal_str).map_err(|_| "Invalid balance format".to_string());
-            }
-            // legacy support if old N values exist
-            if let Some(AttributeValue::N(bal_str)) = item.get("balance") {
-                if let Ok(f) = bal_str.parse::<f64>() {
-                    return Ok(U256::from((f * 1e18) as u128));
-                }
-            }
-        }
-        
-        // No default seed - credit only comes from on-chain deposits via sync
-        Ok(U256::ZERO)
+        // thin wrapper: use adapter for decision
+        Ok(crate::hardening::balance_from_item(result.item.as_ref()))
     }
 
     pub async fn deduct_balance(&self, address: &str, cost: U256) -> Result<(), String> {
@@ -379,8 +362,7 @@ impl DynamoStorage {
     }
 
     pub async fn check_and_record_request(&self, address: &str, window_secs: u64, max_requests: u32) -> Result<bool, String> {
-        // Use shared pure sliding-window for rate. Load list of ts from "rate_ts" field (S "ts1,ts2,..."),
-        // call pure, save back. On get-miss/err treat as empty list (no prior), decide, only Err if put fails after allow.
+        // thin wrapper: load, call adapter decide, persist
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -397,23 +379,18 @@ impl DynamoStorage {
         {
             if let Some(item) = result.item {
                 if let Some(AttributeValue::S(list_str)) = item.get("rate_ts") {
-                    for s in list_str.split(',') {
-                        if let Ok(t) = s.parse::<u64>() {
-                            timestamps.push(t);
-                        }
-                    }
+                    timestamps = crate::hardening::parse_rate_ts(list_str);
                 }
             }
-        } // else: get miss/err -> empty list (no prior state), proceed to pure decision
+        }
 
-        let allowed = crate::hardening::rate_limit_allow(now, window_secs, max_requests, &mut timestamps);
+        let allowed = crate::hardening::dynamo_rate_decide(now, window_secs, max_requests, &mut timestamps);
 
         if !allowed {
             return Ok(false);
         }
 
-        // allowed: try persist
-        let list_str = timestamps.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",");
+        let list_str = crate::hardening::serialize_rate_ts(&timestamps);
         let put_res = self.client.put_item()
             .table_name(&self.balances_table)
             .item("address", AttributeValue::S(key))
