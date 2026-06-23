@@ -11,6 +11,7 @@ use std::sync::Arc;
 use time::OffsetDateTime;
 use tower::ServiceExt;
 use api::storage::{StorageBackend, MemoryStorage};
+use alloy_primitives::U256;
 
 fn to_eip55_address(address_bytes: &[u8; 20]) -> String {
     let address_hex = hex::encode(address_bytes); // lowercase hex
@@ -89,9 +90,9 @@ async fn test_estimate_endpoint() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let res_json: Value = serde_json::from_slice(&body).unwrap();
 
-    // Expected cost = 0.0001 * (1.0 + (3 * 0.1)) * 10 = 0.0013
-    let diff = (res_json["estimated_cost"].as_f64().unwrap() - 0.0013).abs();
-    assert!(diff < 1e-9, "Cost difference {} too large", diff);
+    // Expected: 0.0013 with 18 decimals = "1300000000000000"
+    let estimated = res_json["estimated_cost"].as_str().unwrap();
+    assert_eq!(estimated, "1300000000000000");
 }
 
 #[tokio::test]
@@ -99,8 +100,11 @@ async fn test_evaluate_endpoint() {
     let (signing_key, address) = generate_wallet();
 
     let storage = MemoryStorage::new();
-    // Seed the wallet balance
-    storage.add_balance(&address, 10.0).await.unwrap();
+    // Seed the wallet balance: 10 full units (18 decimals)
+    // Use lowercase for storage key consistency (verify returns lowercase)
+    let seed: U256 = U256::from(10u64) * U256::from(1_000_000_000_000_000_000u64);
+    let address_lower = address.to_lowercase();
+    storage.add_balance(&address_lower, seed).await.unwrap();
 
     let state = AppState {
         storage: Arc::new(StorageBackend::Memory(storage)),
@@ -125,6 +129,10 @@ async fn test_evaluate_endpoint() {
          Issued At: {}",
         address, now_str
     );
+
+    // Para pruebas con verificación estricta (si se setean las vars)
+    std::env::set_var("SIWE_DOMAIN", "localhost:3000");
+    std::env::set_var("SIWE_URI", "http://localhost:3000/v1/evaluate");
 
     let signature = sign_siwe_message(&signing_key, &siwe_message);
 
@@ -159,6 +167,6 @@ async fn test_evaluate_endpoint() {
 
     let res_json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(res_json["result"].as_f64().unwrap(), 30.0);
-    let diff = (res_json["cost"].as_f64().unwrap() - 0.00012).abs();
-    assert!(diff < 1e-9);
+    // Cost for depth=2 batch=1 is 120000000000000
+    assert_eq!(res_json["cost"].as_str().unwrap(), "120000000000000");
 }

@@ -16,6 +16,7 @@ lambda_http = "0.13"
 aws-config = { version = "1.5", behavior-version = "latest" }
 aws-sdk-dynamodb = "1.30"
 alloy = { version = "2.1.0", features = ["full", "reqwest", "providers"] }
+alloy-primitives = { version = "1.6" }
 futures-util = "0.3.32"
 
 [[bin]]

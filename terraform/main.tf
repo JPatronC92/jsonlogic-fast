@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 # DynamoDB Tables
-resource "aws_dynamodb_table" "balances" {
+resource "aws_dynamodb_table" "b2a_balances" {
   name           = "${var.balances_table_name}_${var.environment}"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "address"
@@ -19,7 +19,7 @@ resource "aws_dynamodb_table" "balances" {
   }
 }
 
-resource "aws_dynamodb_table" "nonces" {
+resource "aws_dynamodb_table" "b2a_nonces" {
   name           = "${var.nonces_table_name}_${var.environment}"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "id"
@@ -40,9 +40,9 @@ resource "aws_dynamodb_table" "nonces" {
   }
 }
 
-# IAM Role for Lambda
-resource "aws_iam_role" "lambda_execution_role" {
-  name = "b2a_lambda_exec_role_${var.environment}"
+# IAM Role for B2A API Lambda (least privilege)
+resource "aws_iam_role" "b2a_api_lambda_role" {
+  name = "b2a-api-lambda-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -58,44 +58,39 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 }
 
-# IAM Policy for DynamoDB Access
-resource "aws_iam_policy" "lambda_dynamodb_policy" {
-  name        = "b2a_dynamodb_policy_${var.environment}"
-  description = "Allows Lambda to access DynamoDB tables"
+# Corrección en main.tf para el IAM Role del API Server B2A
+# Política inline con privilegio mínimo (solo lo que el código Rust realmente usa)
+resource "aws_iam_role_policy" "b2a_api_dynamodb_policy" {
+  name = "B2AApiDynamoDBAccess"
+  role = aws_iam_role.b2a_api_lambda_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
+        Effect = "Allow"
         Action = [
-          "dynamodb:PutItem",
           "dynamodb:GetItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Scan"
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem"
         ]
-        Effect   = "Allow"
+        # NUNCA usar "*". Restringir al ARN exacto del entorno actual.
         Resource = [
-          aws_dynamodb_table.balances.arn,
-          aws_dynamodb_table.nonces.arn
+          aws_dynamodb_table.b2a_balances.arn,
+          aws_dynamodb_table.b2a_nonces.arn
         ]
       },
       {
+        Effect = "Allow"
         Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Effect   = "Allow"
         Resource = "arn:aws:logs:*:*:*"
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
 }
 
 # Package the Lambda payload
@@ -109,7 +104,7 @@ data "archive_file" "lambda_zip" {
 # Lambda Function (API)
 resource "aws_lambda_function" "b2a_api" {
   function_name    = "b2a_api_${var.environment}"
-  role             = aws_iam_role.lambda_execution_role.arn
+  role             = aws_iam_role.b2a_api_lambda_role.arn
   handler          = "bootstrap" # Rust custom runtime requires this handler name
   runtime          = "provided.al2023" # Amazon Linux 2023 for Rust
   architectures    = ["arm64"] # Or x86_64 depending on build
@@ -121,14 +116,14 @@ resource "aws_lambda_function" "b2a_api" {
   environment {
     variables = {
       USE_DYNAMODB    = "true"
-      BALANCES_TABLE  = aws_dynamodb_table.balances.name
-      NONCES_TABLE    = aws_dynamodb_table.nonces.name
+      BALANCES_TABLE  = aws_dynamodb_table.b2a_balances.name
+      NONCES_TABLE    = aws_dynamodb_table.b2a_nonces.name
       RPC_URL         = var.rpc_url
       CONTRACT_ADDRESS= var.contract_address
     }
   }
 
-  depends_on = [aws_iam_role_policy_attachment.lambda_policy_attach]
+  depends_on = [aws_iam_role_policy.b2a_api_dynamodb_policy]
 }
 
 # API Gateway HTTP API
