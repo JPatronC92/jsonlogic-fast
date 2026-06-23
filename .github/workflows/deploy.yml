@@ -3,7 +3,6 @@ name: Build and Deploy
 on:
   push:
     branches:
-      - main
       - feature-b2a-api*
 
 jobs:
@@ -73,8 +72,8 @@ jobs:
         # PRIVATE_KEY y otros secretos se cargan desde AWS Secrets Manager (no se pasan por variables)
 
       - name: Terraform Apply
-        # Se aplica en main y en ramas feature-b2a-* (estrategia actual del proyecto)
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature-b2a')
+        # Se aplica en ramas feature-b2a-* (main no se toca)
+        if: startsWith(github.ref, 'refs/heads/feature-b2a')
         working-directory: ./terraform
         run: terraform apply -auto-approve tfplan
         # Secrets (incluyendo private keys) se cargan desde AWS Secrets Manager en los manifiestos
