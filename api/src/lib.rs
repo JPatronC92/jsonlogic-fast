@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 pub mod storage;
 pub mod blockchain;
+mod hardening;
 use storage::StorageBackend;
 
 #[derive(Clone)]
@@ -84,11 +85,14 @@ pub async fn evaluate(
         return Err((StatusCode::UNAUTHORIZED, "Nonce already used (replay attack detected)".into()));
     }
 
-    // Basic rate limiting: 10 requests per minute per wallet
-    let rate_ok = state.storage.check_and_record_request(&wallet_address, 60, 10)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
+    // Basic rate limiting: 10 requests per minute per wallet.
+    // Treat Err (e.g. transient put after allow, or get miss) as allow (fail-open) to avoid 500 for rate.
+    // Only explicit false from pure decision -> 429.
+    let rate_result = state.storage.check_and_record_request(&wallet_address, 60, 10).await;
+    let rate_ok = match rate_result {
+        Ok(b) => b,
+        Err(_) => true,
+    };
     if !rate_ok {
         return Err((StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded".into()));
     }

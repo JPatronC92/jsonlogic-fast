@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -78,8 +78,8 @@ pub struct MemoryStorage {
     // Nonce -> timestamp (unix seconds) for cleanup, matching Dynamo TTL behavior
     nonces: Arc<Mutex<HashMap<String, u64>>>,
     last_sync_block: Arc<Mutex<u64>>,
-    // address -> last request timestamp for basic rate limiting
-    last_requests: Arc<Mutex<HashMap<String, u64>>>,
+    // address -> vec of recent request timestamps (within window) for per-address rate limiting
+    last_requests: Arc<Mutex<HashMap<String, Vec<u64>>>>,
 }
 
 impl MemoryStorage {
@@ -93,34 +93,23 @@ impl MemoryStorage {
     }
 }
 
-/// Default seed balance: 10 units with 18 decimals
-
-
 impl MemoryStorage {
     pub async fn check_and_record_nonce(&self, address: &str, nonce: &str) -> Result<bool, String> {
         let mut nonces = self.nonces.lock().await;
         let pk = format!("{}#{}", address, nonce);
-
-        // Cleanup old nonces (TTL 1h like Dynamo) to prevent memory leak
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
         let ttl = 3600u64;
-        nonces.retain(|_, ts| now - *ts < ttl);
-
-        if nonces.contains_key(&pk) {
-            Ok(false)
-        } else {
-            nonces.insert(pk, now);
-            Ok(true)
-        }
+        let allowed = crate::hardening::nonce_allow(now, ttl, &pk, &mut nonces);
+        Ok(allowed)
     }
 
     pub async fn get_balance(&self, address: &str) -> Result<U256, String> {
         let balances = self.balances.lock().await;
-        // No default seed balance - only what has been deposited/added
-        Ok(*balances.get(address).unwrap_or(&U256::ZERO))
+        // Use pure default (ZERO, no 10-unit seed)
+        Ok(*balances.get(address).unwrap_or(&crate::hardening::default_balance()))
     }
 
     pub async fn deduct_balance(&self, address: &str, cost: U256) -> Result<(), String> {
@@ -167,17 +156,9 @@ impl MemoryStorage {
             .unwrap()
             .as_secs();
 
-        // Clean old
-        requests.retain(|_, ts| now - *ts < window_secs);
-
-        let count = requests.values().filter(|&&ts| now - ts < window_secs).count() as u32; // simplistic count in window
-
-        if count >= max_requests {
-            return Ok(false);
-        }
-
-        requests.insert(address.to_string(), now);
-        Ok(true)
+        let entry = requests.entry(address.to_string()).or_insert_with(Vec::new);
+        let allowed = crate::hardening::rate_limit_allow(now, window_secs, max_requests, entry);
+        Ok(allowed)
     }
 }
 
@@ -397,41 +378,51 @@ impl DynamoStorage {
     }
 
     pub async fn check_and_record_request(&self, address: &str, window_secs: u64, max_requests: u32) -> Result<bool, String> {
-        // Simple last-request based rate limit for Dynamo (full counter would use separate table or GSI)
+        // Use shared pure sliding-window for rate. Load list of ts from "rate_ts" field (S "ts1,ts2,..."),
+        // call pure, save back. On get-miss/err treat as empty list (no prior), decide, only Err if put fails after allow.
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let key = format!("__rate:last:{}", address);
+        let key = format!("__rate:{}", address);
 
-        let result = self.client.get_item()
+        let mut timestamps: Vec<u64> = Vec::new();
+        if let Ok(result) = self.client.get_item()
             .table_name(&self.balances_table)
             .key("address", AttributeValue::S(key.clone()))
             .send()
             .await
-            .map_err(|e| format!("Dynamo rate get error: {:?}", e))?;
-
-        if let Some(item) = result.item {
-            if let Some(AttributeValue::S(ts_str)) = item.get("balance") {
-                if let Ok(last_ts) = ts_str.parse::<u64>() {
-                    if now - last_ts < window_secs {
-                        // For simplicity, allow 1 per window; for real use counter
-                        return Ok(false);
+        {
+            if let Some(item) = result.item {
+                if let Some(AttributeValue::S(list_str)) = item.get("rate_ts") {
+                    for s in list_str.split(',') {
+                        if let Ok(t) = s.parse::<u64>() {
+                            timestamps.push(t);
+                        }
                     }
                 }
             }
+        } // else: get miss/err -> empty list (no prior state), proceed to pure decision
+
+        let allowed = crate::hardening::rate_limit_allow(now, window_secs, max_requests, &mut timestamps);
+
+        if !allowed {
+            return Ok(false);
         }
 
-        // Record
-        self.client.put_item()
+        // allowed: try persist
+        let list_str = timestamps.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",");
+        let put_res = self.client.put_item()
             .table_name(&self.balances_table)
             .item("address", AttributeValue::S(key))
-            .item("balance", AttributeValue::S(now.to_string()))
+            .item("rate_ts", AttributeValue::S(list_str))
             .send()
-            .await
-            .map_err(|e| format!("Dynamo rate set error: {:?}", e))?;
+            .await;
 
-        Ok(true)
+        match put_res {
+            Ok(_) => Ok(true),
+            Err(e) => Err(format!("Dynamo rate put after allow failed: {:?}", e)),
+        }
     }
 }

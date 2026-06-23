@@ -35,7 +35,7 @@ variable "contract_address" {
 }
 
 variable "private_key" {
-  description = "DEPRECATED - Private key now loaded from AWS Secrets Manager (b2a/slasher-private-key-${environment}) in the Terraform manifests. Kept for backward compatibility only."
+  description = "DEPRECATED - Private key now loaded from AWS Secrets Manager (see b2a/slasher-private-key-<env>) in the Terraform manifests. Kept for backward compatibility only."
   type        = string
   sensitive   = true
   default     = ""  # No longer used

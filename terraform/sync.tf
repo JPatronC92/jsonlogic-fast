@@ -116,8 +116,4 @@ resource "aws_lambda_permission" "allow_eventbridge_sync" {
   source_arn    = aws_cloudwatch_event_rule.sync_cron.arn
 }
 
-# Output for reference
-output "sync_lambda_arn" {
-  description = "The ARN of the B2A Sync Deposits Lambda"
-  value       = aws_lambda_function.b2a_sync.arn
-}
+# Output moved to outputs.tf for uniqueness
