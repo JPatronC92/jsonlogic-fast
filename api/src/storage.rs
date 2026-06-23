@@ -183,6 +183,7 @@ impl DynamoStorage {
 
 impl DynamoStorage {
     pub async fn check_and_record_nonce(&self, address: &str, nonce: &str) -> Result<bool, String> {
+        // Dynamo uses native put+condition_not_exists + TTL for atomic replay prevention (equivalent to nonce_allow pure logic used by Memory; DB handles cleanup).
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
