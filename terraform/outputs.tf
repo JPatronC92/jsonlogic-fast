@@ -19,6 +19,6 @@ output "sync_lambda_arn" {
 }
 
 output "environment" {
-  description = "The environment used for resource namespacing"
+  description = "The environment used for resource namespacing (Fase 3 env separation)"
   value       = var.environment
 }
