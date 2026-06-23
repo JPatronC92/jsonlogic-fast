@@ -13,7 +13,8 @@ pub async fn verify_siwe(message_str: &str, signature_hex: &str) -> Result<Strin
         .map_err(|_| "Signature must be 65 bytes long".to_string())?;
 
     match message
-        .verify(&signature, &VerificationOpts::default()).await
+        .verify(&signature, &VerificationOpts::default())
+        .await
     {
         Ok(_) => {
             let address = format!("0x{}", hex::encode(message.address));
