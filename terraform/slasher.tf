@@ -6,6 +6,7 @@ data "archive_file" "slasher_zip" {
 }
 
 # Load private key securely from Secrets Manager (not passed via TF var)
+# For prod: ensure secret b2a/slasher-private-key-prod exists in AWS Secrets (see prod secrets setup in roadmap).
 data "aws_secretsmanager_secret_version" "slasher_private_key" {
   secret_id = "b2a/slasher-private-key-${var.environment}"
 }

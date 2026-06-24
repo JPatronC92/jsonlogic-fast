@@ -23,13 +23,13 @@ variable "nonces_table_name" {
 }
 
 variable "rpc_url" {
-  description = "RPC URL for the blockchain network"
+  description = "RPC URL for the blockchain network. For prod/mainnet use https://mainnet.base.org (or your provider). Set via TF_VAR or secrets for prod."
   type        = string
   default     = "https://sepolia.base.org"
 }
 
 variable "contract_address" {
-  description = "Address of the B2AStaking contract"
+  description = "Address of the B2AStaking contract. For Base Mainnet prod set to the real deployed address (see go-live checklist)."
   type        = string
   default     = "0x0000000000000000000000000000000000000000" # Replace in production
 }

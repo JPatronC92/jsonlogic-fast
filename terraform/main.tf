@@ -2,6 +2,11 @@ provider "aws" {
   region = var.aws_region
 }
 
+# For production (Fase 4 / mainnet):
+#   terraform apply -var="environment=prod" -var="rpc_url=https://mainnet.base.org" ...
+# Secrets for PRIVATE_KEY and other keys are loaded via AWS Secrets Manager (see slasher.tf / lambda).
+# Never set sensitive vars on CLI for prod. Use env or secret store.
+
 # DynamoDB Tables
 resource "aws_dynamodb_table" "b2a_balances" {
   name           = "${var.balances_table_name}_${var.environment}"
