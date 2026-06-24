@@ -437,7 +437,7 @@ async fn test_siwe_chain_mismatch_unauthorized() {
     // (the check happens before signature verification).
     std::env::set_var("SIWE_CHAIN_ID", "999");
 
-    let siwe = "localhost:3000 wants you to sign in with your Ethereum account:\n0x0000000000000000000000000000000000000000\n\nSign in.\n\nURI: http://localhost:3000/v1/evaluate\nVersion: 1\nChain ID: 1\nNonce: mm\nIssued At: 2026-06-24T00:00:00Z";
+    let siwe = "localhost:3000 wants you to sign in with your Ethereum account:\n0x0000000000000000000000000000000000000000\n\nSign in.\n\nURI: http://localhost:3000/v1/evaluate\nVersion: 1\nChain ID: 1\nNonce: mismatch123\nIssued At: 2026-06-24T00:00:00Z";
     // Garbage signature is fine — we never reach crypto verify.
     let res = jsonlogic_fast::b2a::auth::verify_siwe(
         siwe,
