@@ -327,17 +327,11 @@ Si se implementara exitosamente el cobro de 0.5% sobre beneficio:
 
 ---
 
-**Documento actualizado** (22 junio 2026) para reflejar fielmente la visión de **Logic-as-a-Service nativo para la economía de agentes de IA (B2A)**.
-
-- Todo desarrollo se mergea a la rama `feature-b2a-api-*`.
-- Se evaluó el modelo de cobro automático de royalty propuesto.
-- Se mantiene recomendación de avanzar primero con un peaje por cómputo trustless robusto.
-
-¿Deseas que convierta alguna sección en tickets concretos (GitHub Issues) o que profundice en algún apartado específico (por ejemplo, diseño detallado del Sync Worker o estimación más granular de costos)?---
+**Documento actualizado** (22 junio 2026)
 
 ## 11. Fase 4 - Go-Live Checklist (Pre-Producción / Mainnet Readiness)
 
-This section was added during Fase 4 implementation on eature-b2a-fase4-operacion.
+This section was added during Fase 4 implementation on feature-b2a-fase4-operacion.
 
 ### Pre-Deployment Gates
 - [ ] cargo test (api/) + unit tests for retry/backoff pass with no regressions.
@@ -348,15 +342,15 @@ This section was added during Fase 4 implementation on eature-b2a-fase4-operaci
 - [ ] Retry/backoff active in sync_deposits and slasher for get_block_number, get_logs, balances.call, slash.send.
 
 ### Contract & On-Chain
-- [ ] B2AStaking contract deployed on **Base Mainnet** (use 2a_smart_contract.sol).
+- [ ] B2AStaking contract deployed on **Base Mainnet** (use b2a_smart_contract.sol).
 - [ ] CONTRACT_ADDRESS updated in prod secrets / TF vars for mainnet.
 - [ ] Ownership / access control verified on mainnet contract (no test keys).
 - [ ] Sample mainnet RPC verified: https://mainnet.base.org (or Alchemy/Infura equiv).
 
 ### Secrets & Config (Prod)
 - [ ] AWS Secrets created/updated:
-  - 2a/slasher-private-key-prod
-  - 2a/api-private-key-prod (if separate)
+  - b2a/slasher-private-key-prod
+  - b2a/api-private-key-prod (if separate)
   - Any RPC keys if using authenticated provider.
 - [ ] Secrets never in git, TF state, or logs. Loaded only at runtime via Secrets Manager.
 - [ ] Prod env vars: RPC_URL=https://mainnet.base.org , ENVIRONMENT=prod , USE_DYNAMODB=true , SYNC_MAX_BLOCKS tuned.
@@ -372,4 +366,4 @@ This section was added during Fase 4 implementation on eature-b2a-fase4-operaci
 - Manual smoke via python clients on test endpoint if sandbox available.
 - No direct changes to main; all via PR to source-of-truth branch.
 
-Update this checklist as items complete. Reference: Fase 4 items (resilience, mainnet prep, checklist) in eature-b2a-fase4-operacion.
+Update this checklist as items complete. Reference: Fase 4 items (resilience, mainnet prep, checklist) in feature-b2a-fase4-operacion.
