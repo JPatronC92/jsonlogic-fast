@@ -28,11 +28,16 @@ pub async fn verify_siwe(
         opts.domain = Some(domain.parse().map_err(|_| "Invalid domain".to_string())?);
     }
 
-    // Nota: uri se valida principalmente a través del propio Message y el signer.
-    // timestamp y nonce se manejan por defecto en la librería.
-    // Para mayor estrictez se puede extender con más campos del opts.
+    // Validación estricta de URI (si se provee) para cumplir con recomendaciones de S1 del roadmap
+    if let Some(uri) = expected_uri {
+        // Verificación post-parse: el URI del mensaje debe coincidir (case-insensitive en host/path básico)
+        let msg_uri = message.uri.to_string();
+        if !msg_uri.eq_ignore_ascii_case(uri) && !msg_uri.starts_with(uri) {
+            return Err(format!("URI mismatch: expected {}, got {}", uri, msg_uri));
+        }
+    }
 
-    // Validación estricta de tiempo y otros campos por defecto del crate
+    // Validación criptográfica + domain (si se configuró)
     match message.verify(&signature, &opts).await {
         Ok(_) => {
             let address = format!("0x{}", hex::encode(message.address));
