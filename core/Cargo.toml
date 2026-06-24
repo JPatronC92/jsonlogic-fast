@@ -24,6 +24,7 @@ serde_json.workspace = true
 siwe = "0.6.1"
 thiserror = "2.0"
 time = "0.3.41"
+alloy-primitives = { version = "1.6", default-features = false, features = ["std"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1.12"

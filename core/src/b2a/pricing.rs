@@ -1,10 +1,17 @@
+use alloy_primitives::U256;
 use serde_json::Value;
 
-pub fn estimate_cost(rule_depth: usize, batch_size: usize) -> f64 {
-    let base_cost = 0.0001; // $0.0001 per base eval
-    let depth_multiplier = 1.0 + (rule_depth as f64 * 0.1); // 10% more per depth level
+/// Base cost: 0.0001 with 18 decimals (same unit as on-chain wei deposits)
+const BASE_COST: u128 = 100_000_000_000_000;           // 0.0001 * 10^18
+const DEPTH_BONUS_PER_LEVEL: u128 = 10_000_000_000_000; // 0.00001 * 10^18 (10% of base)
 
-    base_cost * depth_multiplier * (batch_size as f64)
+/// Returns the cost of an evaluation as U256 (18 decimal places precision).
+/// This eliminates all floating point conversion issues with large integers.
+pub fn estimate_cost(rule_depth: usize, batch_size: usize) -> U256 {
+    let base = U256::from(BASE_COST);
+    let bonus = U256::from(DEPTH_BONUS_PER_LEVEL) * U256::from(rule_depth as u64);
+    let cost_per_eval = base + bonus;
+    cost_per_eval * U256::from(batch_size as u64)
 }
 
 /// Dynamically calculates the logical depth of a JSONLogic rule tree.
@@ -39,5 +46,20 @@ mod tests {
             })),
             3
         );
+    }
+
+    #[test]
+    fn test_estimate_cost_u256() {
+        // depth 3, batch 10:
+        // old: 0.0001 * 1.3 * 10 = 0.0013
+        // new: 1.3e15  (0.0013 * 10^18)
+        let cost = estimate_cost(3, 10);
+        let expected: U256 = U256::from(1_300_000_000_000_000u128);
+        assert_eq!(cost, expected);
+
+        // depth 2, batch 1: 0.00012 * 1e18 = 120_000_000_000_000
+        let cost2 = estimate_cost(2, 1);
+        let expected2: U256 = U256::from(120_000_000_000_000u128);
+        assert_eq!(cost2, expected2);
     }
 }

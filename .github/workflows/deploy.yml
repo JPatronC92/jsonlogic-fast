@@ -3,7 +3,6 @@ name: Build and Deploy
 on:
   push:
     branches:
-      - main
       - feature-b2a-api*
 
 jobs:
@@ -16,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -46,13 +45,18 @@ jobs:
         working-directory: ./api
         run: cargo lambda build --release --arm64 --bin slasher
 
+      # Sync worker (polling mode) - se ejecuta vía EventBridge
+      - name: Build Sync Deposits Worker
+        working-directory: ./api
+        run: cargo lambda build --release --arm64 --bin sync_deposits
+
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.5.0"
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -64,9 +68,12 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ./terraform
-        run: terraform plan -var="private_key=${{ secrets.PRIVATE_KEY }}" -out=tfplan
+        run: terraform plan -out=tfplan
+        # PRIVATE_KEY y otros secretos se cargan desde AWS Secrets Manager (no se pasan por variables)
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
+        # Se aplica en ramas feature-b2a-* (main no se toca)
+        if: startsWith(github.ref, 'refs/heads/feature-b2a')
         working-directory: ./terraform
         run: terraform apply -auto-approve tfplan
+        # Secrets (incluyendo private keys) se cargan desde AWS Secrets Manager en los manifiestos

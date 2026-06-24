@@ -12,3 +12,13 @@ output "slasher_lambda_arn" {
   description = "The ARN of the B2A Slasher Lambda function"
   value       = aws_lambda_function.b2a_slasher.arn
 }
+
+output "sync_lambda_arn" {
+  description = "The ARN of the B2A Sync Deposits Lambda function"
+  value       = aws_lambda_function.b2a_sync.arn
+}
+
+output "environment" {
+  description = "The environment used for resource namespacing (Fase 3 env separation)"
+  value       = var.environment
+}

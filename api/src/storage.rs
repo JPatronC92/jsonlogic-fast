@@ -1,8 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use aws_sdk_dynamodb::{Client, types::AttributeValue};
 use std::time::{SystemTime, UNIX_EPOCH};
+use alloy_primitives::U256;
 
 #[derive(Clone)]
 pub enum StorageBackend {
@@ -18,46 +20,75 @@ impl StorageBackend {
         }
     }
 
-    pub async fn get_balance(&self, address: &str) -> Result<f64, String> {
+    pub async fn get_balance(&self, address: &str) -> Result<U256, String> {
         match self {
             StorageBackend::Memory(m) => m.get_balance(address).await,
             StorageBackend::Dynamo(d) => d.get_balance(address).await,
         }
     }
 
-    pub async fn deduct_balance(&self, address: &str, cost: f64) -> Result<(), String> {
+    pub async fn deduct_balance(&self, address: &str, cost: U256) -> Result<(), String> {
         match self {
             StorageBackend::Memory(m) => m.deduct_balance(address, cost).await,
             StorageBackend::Dynamo(d) => d.deduct_balance(address, cost).await,
         }
     }
 
-    pub async fn add_balance(&self, address: &str, amount: f64) -> Result<(), String> {
+    pub async fn add_balance(&self, address: &str, amount: U256) -> Result<(), String> {
         match self {
             StorageBackend::Memory(m) => m.add_balance(address, amount).await,
             StorageBackend::Dynamo(d) => d.add_balance(address, amount).await,
         }
     }
 
-    pub async fn get_all_balances(&self) -> Result<Vec<(String, f64)>, String> {
+    pub async fn get_all_balances(&self) -> Result<Vec<(String, U256)>, String> {
         match self {
             StorageBackend::Memory(m) => m.get_all_balances().await,
             StorageBackend::Dynamo(d) => d.get_all_balances().await,
+        }
+    }
+
+    /// Obtiene el último bloque procesado por el sync (para reanudar sin perder eventos).
+    pub async fn get_last_sync_block(&self) -> Result<u64, String> {
+        match self {
+            StorageBackend::Memory(m) => m.get_last_sync_block().await,
+            StorageBackend::Dynamo(d) => d.get_last_sync_block().await,
+        }
+    }
+
+    pub async fn set_last_sync_block(&self, block: u64) -> Result<(), String> {
+        match self {
+            StorageBackend::Memory(m) => m.set_last_sync_block(block).await,
+            StorageBackend::Dynamo(d) => d.set_last_sync_block(block).await,
+        }
+    }
+
+    /// Basic rate limit: returns true if allowed (within window)
+    pub async fn check_and_record_request(&self, address: &str, window_secs: u64, max_requests: u32) -> Result<bool, String> {
+        match self {
+            StorageBackend::Memory(m) => m.check_and_record_request(address, window_secs, max_requests).await,
+            StorageBackend::Dynamo(d) => d.check_and_record_request(address, window_secs, max_requests).await,
         }
     }
 }
 
 #[derive(Clone)]
 pub struct MemoryStorage {
-    balances: Arc<Mutex<HashMap<String, f64>>>,
-    nonces: Arc<Mutex<HashSet<String>>>,
+    balances: Arc<Mutex<HashMap<String, U256>>>,
+    // Nonce -> timestamp (unix seconds) for cleanup, matching Dynamo TTL behavior
+    nonces: Arc<Mutex<HashMap<String, u64>>>,
+    last_sync_block: Arc<Mutex<u64>>,
+    // address -> vec of recent request timestamps (within window) for per-address rate limiting
+    last_requests: Arc<Mutex<HashMap<String, Vec<u64>>>>,
 }
 
 impl MemoryStorage {
     pub fn new() -> Self {
         Self {
             balances: Arc::new(Mutex::new(HashMap::new())),
-            nonces: Arc::new(Mutex::new(HashSet::new())),
+            nonces: Arc::new(Mutex::new(HashMap::new())),
+            last_sync_block: Arc::new(Mutex::new(0)),
+            last_requests: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -66,22 +97,24 @@ impl MemoryStorage {
     pub async fn check_and_record_nonce(&self, address: &str, nonce: &str) -> Result<bool, String> {
         let mut nonces = self.nonces.lock().await;
         let pk = format!("{}#{}", address, nonce);
-        if nonces.contains(&pk) {
-            Ok(false)
-        } else {
-            nonces.insert(pk);
-            Ok(true)
-        }
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let ttl = 3600u64;
+        let allowed = crate::hardening::nonce_allow(now, ttl, &pk, &mut nonces);
+        Ok(allowed)
     }
 
-    pub async fn get_balance(&self, address: &str) -> Result<f64, String> {
+    pub async fn get_balance(&self, address: &str) -> Result<U256, String> {
         let balances = self.balances.lock().await;
-        Ok(*balances.get(address).unwrap_or(&10.0)) // Default seed
+        // Use pure default (ZERO, no 10-unit seed)
+        Ok(*balances.get(address).unwrap_or(&crate::hardening::default_balance()))
     }
 
-    pub async fn deduct_balance(&self, address: &str, cost: f64) -> Result<(), String> {
+    pub async fn deduct_balance(&self, address: &str, cost: U256) -> Result<(), String> {
         let mut balances = self.balances.lock().await;
-        let current = *balances.get(address).unwrap_or(&10.0);
+        let current = *balances.get(address).unwrap_or(&U256::ZERO);
         if current < cost {
             return Err("Insufficient funds".to_string());
         }
@@ -89,20 +122,43 @@ impl MemoryStorage {
         Ok(())
     }
 
-    pub async fn add_balance(&self, address: &str, amount: f64) -> Result<(), String> {
+    pub async fn add_balance(&self, address: &str, amount: U256) -> Result<(), String> {
         let mut balances = self.balances.lock().await;
-        let current = *balances.get(address).unwrap_or(&10.0);
+        let current = *balances.get(address).unwrap_or(&U256::ZERO);
         balances.insert(address.to_string(), current + amount);
         Ok(())
     }
 
-    pub async fn get_all_balances(&self) -> Result<Vec<(String, f64)>, String> {
+    pub async fn get_all_balances(&self) -> Result<Vec<(String, U256)>, String> {
         let cache = self.balances.lock().await;
         let mut results = Vec::new();
         for (k, v) in cache.iter() {
             results.push((k.clone(), *v));
         }
         Ok(results)
+    }
+
+    pub async fn get_last_sync_block(&self) -> Result<u64, String> {
+        let block = self.last_sync_block.lock().await;
+        Ok(*block)
+    }
+
+    pub async fn set_last_sync_block(&self, block: u64) -> Result<(), String> {
+        let mut last = self.last_sync_block.lock().await;
+        *last = block;
+        Ok(())
+    }
+
+    pub async fn check_and_record_request(&self, address: &str, window_secs: u64, max_requests: u32) -> Result<bool, String> {
+        let mut requests = self.last_requests.lock().await;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let entry = requests.entry(address.to_string()).or_insert_with(Vec::new);
+        let allowed = crate::hardening::rate_limit_allow(now, window_secs, max_requests, entry);
+        Ok(allowed)
     }
 }
 
@@ -127,6 +183,7 @@ impl DynamoStorage {
 
 impl DynamoStorage {
     pub async fn check_and_record_nonce(&self, address: &str, nonce: &str) -> Result<bool, String> {
+        // Dynamo uses native put+condition_not_exists + TTL for atomic replay prevention (equivalent to nonce_allow pure logic used by Memory; DB handles cleanup).
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -147,17 +204,12 @@ impl DynamoStorage {
         match result {
             Ok(_) => Ok(true),
             Err(e) => {
-                let err_msg = format!("{:?}", e);
-                if err_msg.contains("ConditionalCheckFailedException") {
-                    Ok(false)
-                } else {
-                    Err(format!("DynamoDB error: {}", err_msg))
-                }
+                crate::hardening::interpret_nonce_put(&format!("{:?}", e))
             }
         }
     }
 
-    pub async fn get_balance(&self, address: &str) -> Result<f64, String> {
+    pub async fn get_balance(&self, address: &str) -> Result<U256, String> {
         let result = self.client.get_item()
             .table_name(&self.balances_table)
             .key("address", AttributeValue::S(address.to_string()))
@@ -165,51 +217,93 @@ impl DynamoStorage {
             .await
             .map_err(|e| format!("DynamoDB get error: {:?}", e))?;
 
-        if let Some(item) = result.item {
-            if let Some(AttributeValue::N(bal_str)) = item.get("balance") {
-                return bal_str.parse::<f64>().map_err(|_| "Invalid balance format".to_string());
+        // thin wrapper: use adapter for decision
+        Ok(crate::hardening::balance_from_item(result.item.as_ref()))
+    }
+
+    pub async fn deduct_balance(&self, address: &str, cost: U256) -> Result<(), String> {
+        // Optimistic locking loop para atomicidad
+        loop {
+            let current = self.get_balance(address).await?;
+            if current < cost {
+                return Err("Insufficient funds".to_string());
+            }
+            let new_balance = current - cost;
+
+            let result = self
+                .client
+                .update_item()
+                .table_name(&self.balances_table)
+                .key("address", AttributeValue::S(address.to_string()))
+                .update_expression("SET balance = :new_balance")
+                .condition_expression("balance = :current_balance")
+                .expression_attribute_values(
+                    ":current_balance",
+                    AttributeValue::S(current.to_string()),
+                )
+                .expression_attribute_values(
+                    ":new_balance",
+                    AttributeValue::S(new_balance.to_string()),
+                )
+                .send()
+                .await;
+
+            match result {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    let err_str = format!("{:?}", e);
+                    if err_str.contains("ConditionalCheckFailedException") {
+                        // Conflicto de concurrencia, reintentar
+                        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+                        continue;
+                    } else {
+                        return Err(format!("DynamoDB deduct error: {}", err_str));
+                    }
+                }
             }
         }
-        
-        // Default seed balance for testing
-        Ok(10.0)
     }
 
-    pub async fn deduct_balance(&self, address: &str, cost: f64) -> Result<(), String> {
-        let current = self.get_balance(address).await?;
-        if current < cost {
-            return Err("Insufficient funds".to_string());
+    pub async fn add_balance(&self, address: &str, amount: U256) -> Result<(), String> {
+        // Usamos get + conditional put para consistencia (aunque adds son menos críticos)
+        loop {
+            let current = self.get_balance(address).await.unwrap_or(U256::ZERO);
+            let new_balance = current + amount;
+
+            let result = self
+                .client
+                .update_item()
+                .table_name(&self.balances_table)
+                .key("address", AttributeValue::S(address.to_string()))
+                .update_expression("SET balance = :new_balance")
+                .condition_expression("balance = :current_balance")
+                .expression_attribute_values(
+                    ":current_balance",
+                    AttributeValue::S(current.to_string()),
+                )
+                .expression_attribute_values(
+                    ":new_balance",
+                    AttributeValue::S(new_balance.to_string()),
+                )
+                .send()
+                .await;
+
+            match result {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    let err_str = format!("{:?}", e);
+                    if err_str.contains("ConditionalCheckFailedException") {
+                        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+                        continue;
+                    } else {
+                        return Err(format!("DynamoDB add error: {}", err_str));
+                    }
+                }
+            }
         }
-
-        let new_balance = current - cost;
-
-        self.client.put_item()
-            .table_name(&self.balances_table)
-            .item("address", AttributeValue::S(address.to_string()))
-            .item("balance", AttributeValue::N(new_balance.to_string()))
-            .send()
-            .await
-            .map_err(|e| format!("DynamoDB put error: {:?}", e))?;
-
-        Ok(())
     }
 
-    pub async fn add_balance(&self, address: &str, amount: f64) -> Result<(), String> {
-        let current = self.get_balance(address).await.unwrap_or(0.0);
-        let new_balance = current + amount;
-
-        self.client.put_item()
-            .table_name(&self.balances_table)
-            .item("address", AttributeValue::S(address.to_string()))
-            .item("balance", AttributeValue::N(new_balance.to_string()))
-            .send()
-            .await
-            .map_err(|e| format!("DynamoDB put error: {:?}", e))?;
-
-        Ok(())
-    }
-
-    pub async fn get_all_balances(&self) -> Result<Vec<(String, f64)>, String> {
+    pub async fn get_all_balances(&self) -> Result<Vec<(String, U256)>, String> {
         let mut scan = self.client.scan().table_name(&self.balances_table).into_paginator().send();
         let mut results = Vec::new();
         
@@ -219,10 +313,15 @@ impl DynamoStorage {
                     if let Some(items) = output.items {
                         for item in items {
                             if let (Some(id_val), Some(bal_val)) = (item.get("address"), item.get("balance")) {
-                                if let (Ok(id), Ok(bal_str)) = (id_val.as_s(), bal_val.as_n()) {
-                                    if let Ok(bal) = bal_str.parse::<f64>() {
-                                        results.push((id.clone(), bal));
-                                    }
+                                if let Ok(id) = id_val.as_s() {
+                                    let bal = if let Ok(bal_str) = bal_val.as_s() {
+                                        U256::from_str(bal_str).unwrap_or(U256::ZERO)
+                                    } else if let Ok(bal_str) = bal_val.as_n() {
+                                        bal_str.parse::<f64>().map(|f| U256::from((f * 1e18) as u128)).unwrap_or(U256::ZERO)
+                                    } else {
+                                        U256::ZERO
+                                    };
+                                    results.push((id.clone(), bal));
                                 }
                             }
                         }
@@ -232,5 +331,76 @@ impl DynamoStorage {
             }
         }
         Ok(results)
+    }
+
+    pub async fn get_last_sync_block(&self) -> Result<u64, String> {
+        let result = self.client.get_item()
+            .table_name(&self.balances_table)
+            .key("address", AttributeValue::S("__meta:last_sync_block".to_string()))
+            .send()
+            .await
+            .map_err(|e| format!("DynamoDB get last block error: {:?}", e))?;
+
+        if let Some(item) = result.item {
+            if let Some(AttributeValue::S(block_str)) = item.get("balance") {
+                return block_str.parse::<u64>().map_err(|_| "Invalid block format".to_string());
+            }
+        }
+        Ok(0) // default: start from genesis or 0, caller can decide
+    }
+
+    pub async fn set_last_sync_block(&self, block: u64) -> Result<(), String> {
+        self.client.put_item()
+            .table_name(&self.balances_table)
+            .item("address", AttributeValue::S("__meta:last_sync_block".to_string()))
+            .item("balance", AttributeValue::S(block.to_string()))
+            .send()
+            .await
+            .map_err(|e| format!("DynamoDB set last block error: {:?}", e))?;
+
+        Ok(())
+    }
+
+    pub async fn check_and_record_request(&self, address: &str, window_secs: u64, max_requests: u32) -> Result<bool, String> {
+        // thin wrapper: load, call adapter decide, persist
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let key = format!("__rate:{}", address);
+
+        let mut timestamps: Vec<u64> = Vec::new();
+        if let Ok(result) = self.client.get_item()
+            .table_name(&self.balances_table)
+            .key("address", AttributeValue::S(key.clone()))
+            .send()
+            .await
+        {
+            if let Some(item) = result.item {
+                if let Some(AttributeValue::S(list_str)) = item.get("rate_ts") {
+                    timestamps = crate::hardening::parse_rate_ts(list_str);
+                }
+            }
+        }
+
+        let allowed = crate::hardening::dynamo_rate_decide(now, window_secs, max_requests, &mut timestamps);
+
+        if !allowed {
+            return Ok(false);
+        }
+
+        let list_str = crate::hardening::serialize_rate_ts(&timestamps);
+        let put_res = self.client.put_item()
+            .table_name(&self.balances_table)
+            .item("address", AttributeValue::S(key))
+            .item("rate_ts", AttributeValue::S(list_str))
+            .send()
+            .await;
+
+        match put_res {
+            Ok(_) => Ok(true),
+            Err(e) => Err(format!("Dynamo rate put after allow failed: {:?}", e)),
+        }
     }
 }

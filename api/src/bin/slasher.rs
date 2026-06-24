@@ -1,6 +1,6 @@
 use api::blockchain::{BlockchainConfig, B2AStaking};
 use api::storage::{DynamoStorage, MemoryStorage, StorageBackend};
-use alloy::primitives::{Address, U256};
+use alloy_primitives::{Address, U256};
 use std::env;
 use std::sync::Arc;
 
@@ -29,30 +29,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (user_addr_str, offchain_balance) in all_balances {
         if let Ok(address) = user_addr_str.parse::<Address>() {
-            // Get on-chain balance
-            let onchain_balance_wei = contract.balances(address).call().await?;
-            
-            // Convert wei to f64
-            let onchain_balance_f64 = onchain_balance_wei.to_string().parse::<f64>().unwrap_or(0.0) / 1e18;
+            // Get on-chain balance - native U256, no conversion
+            let onchain_balance: U256 = contract.balances(address).call().await?;
 
-            println!("User {}: On-chain: {:.6}, Off-chain: {:.6}", address, onchain_balance_f64, offchain_balance);
+            println!("User {}: On-chain: {}, Off-chain: {}", address, onchain_balance, offchain_balance);
 
-            if onchain_balance_f64 > offchain_balance {
-                let diff_f64 = onchain_balance_f64 - offchain_balance;
-                
-                // If the difference is meaningful (avoid floating point dust issues)
-                if diff_f64 > 0.0001 {
-                    let diff_wei_str = format!("{:.0}", diff_f64 * 1e18);
-                    if let Ok(diff_wei) = U256::from_str_radix(&diff_wei_str, 10) {
-                        println!("Slashing {} for user {}", diff_wei, address);
-                        match contract.slash(address, diff_wei).send().await {
-                            Ok(tx) => {
-                                println!("Slash tx sent: {:?}", tx.tx_hash());
-                                let _ = tx.watch().await;
-                                println!("Slash tx confirmed!");
-                            }
-                            Err(e) => eprintln!("Failed to slash {}: {}", address, e),
+            if onchain_balance > offchain_balance {
+                let diff = onchain_balance - offchain_balance;
+
+                // Dust threshold: 0.0001 * 10^18 = 100_000_000_000_000 (still using integer)
+                let dust_threshold = U256::from(100_000_000_000_000u64);
+
+                if diff > dust_threshold {
+                    println!("Slashing {} for user {}", diff, address);
+                    match contract.slash(address, diff).send().await {
+                        Ok(tx) => {
+                            println!("Slash tx sent: {:?}", tx.tx_hash());
+                            let _ = tx.watch().await;
+                            println!("Slash tx confirmed!");
                         }
+                        Err(e) => eprintln!("Failed to slash {}: {}", address, e),
                     }
                 }
             }

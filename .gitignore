@@ -18,5 +18,23 @@ Thumbs.db
 .idea/
 *.code-workspace
 
+# Terraform local state / providers / build artifacts (not committed)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+crash.*.log
+terraform.tfvars
+terraform.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+terraform/providers/
+terraform/*.zip
+terraform/*.exe
+
 # Build artifacts
 wasm/pkg/

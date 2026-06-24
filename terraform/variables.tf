@@ -35,8 +35,14 @@ variable "contract_address" {
 }
 
 variable "private_key" {
-  description = "Private key for slasher (use AWS Secrets Manager in prod)"
+  description = "DEPRECATED - Private key now loaded from AWS Secrets Manager (see b2a/slasher-private-key-<env>) in the Terraform manifests. Kept for backward compatibility only."
   type        = string
   sensitive   = true
-  default     = "0000000000000000000000000000000000000000000000000000000000000001"
+  default     = ""  # No longer used
+}
+
+variable "sync_schedule" {
+  description = "EventBridge schedule expression for the deposit sync worker (e.g. rate(2 minutes))"
+  type        = string
+  default     = "rate(2 minutes)"
 }

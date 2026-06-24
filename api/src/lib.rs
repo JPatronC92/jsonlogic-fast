@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 pub mod storage;
 pub mod blockchain;
+mod hardening;
 use storage::StorageBackend;
 
 #[derive(Clone)]
@@ -28,7 +29,8 @@ pub struct EvaluateRequest {
 #[derive(Serialize)]
 pub struct EvaluateResponse {
     pub result: serde_json::Value,
-    pub cost: f64,
+    /// Cost returned as decimal string to preserve full U256 precision (no float loss)
+    pub cost: String,
 }
 
 #[derive(Deserialize)]
@@ -39,7 +41,8 @@ pub struct EstimateRequest {
 
 #[derive(Serialize)]
 pub struct EstimateResponse {
-    pub estimated_cost: f64,
+    /// Cost returned as decimal string (18 decimals unit)
+    pub estimated_cost: String,
 }
 
 pub async fn estimate(Json(payload): Json<EstimateRequest>) -> impl IntoResponse {
@@ -47,7 +50,7 @@ pub async fn estimate(Json(payload): Json<EstimateRequest>) -> impl IntoResponse
     (
         StatusCode::OK,
         Json(EstimateResponse {
-            estimated_cost: cost,
+            estimated_cost: cost.to_string(),
         }),
     )
 }
@@ -56,19 +59,42 @@ pub async fn evaluate(
     State(state): State<AppState>,
     Json(payload): Json<EvaluateRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let wallet_address = verify_siwe(&payload.message, &payload.signature)
-        .await
-        .map_err(|e| (StatusCode::UNAUTHORIZED, e))?;
+    // Valores esperados (pueden venir de env o config en producción)
+    // Para agentes, se recomienda fijar domain y uri estrictos.
+    let expected_domain = std::env::var("SIWE_DOMAIN").ok();
+    let expected_uri = std::env::var("SIWE_URI").ok();
 
-    let siwe_msg = siwe::Message::from_str(&payload.message)
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid SIWE message: {}", e)))?;
+    // Llamada con verificación estricta + devuelve el Message completo
+    let (wallet_address, siwe_msg) = verify_siwe(
+        &payload.message,
+        &payload.signature,
+        expected_domain.as_deref(),
+        expected_uri.as_deref(),
+    )
+    .await
+    .map_err(|e| (StatusCode::UNAUTHORIZED, e))?;
 
-    let nonce_valid = state.storage.check_and_record_nonce(&wallet_address, siwe_msg.nonce.as_str())
+    // Ya no re-parseamos: usamos el Message devuelto por verify_siwe
+    let nonce_valid = state
+        .storage
+        .check_and_record_nonce(&wallet_address, siwe_msg.nonce.as_str())
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     if !nonce_valid {
         return Err((StatusCode::UNAUTHORIZED, "Nonce already used (replay attack detected)".into()));
+    }
+
+    // Basic rate limiting: 10 requests per minute per wallet.
+    // Treat Err (e.g. transient put after allow, or get miss) as allow (fail-open) to avoid 500 for rate.
+    // Only explicit false from pure decision -> 429.
+    let rate_result = state.storage.check_and_record_request(&wallet_address, 60, 10).await;
+    let rate_ok = match rate_result {
+        Ok(b) => b,
+        Err(_) => true,
+    };
+    if !rate_ok {
+        return Err((StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded".into()));
     }
 
     let depth = calculate_rule_depth(&payload.rule);
@@ -110,7 +136,7 @@ pub async fn evaluate(
         StatusCode::OK,
         Json(EvaluateResponse {
             result: result_value,
-            cost,
+            cost: cost.to_string(),
         }),
     ))
 }
