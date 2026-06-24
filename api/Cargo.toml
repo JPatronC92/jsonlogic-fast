@@ -13,11 +13,15 @@ hex = "0.4"
 time = "0.3"
 jsonlogic-fast = { path = "../core" }
 lambda_http = "0.13"
-aws-config = { version = "1.5", behavior-version = "latest" }
+aws-config = { version = "1.5", features = ["behavior-version-latest"] }
 aws-sdk-dynamodb = "1.30"
+aws-sdk-secretsmanager = "1.30"
 alloy = { version = "2.1.0", features = ["full", "reqwest", "providers"] }
 alloy-primitives = { version = "1.6" }
 futures-util = "0.3.32"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2.0"
 
 [[bin]]
 name = "api_server"

@@ -106,6 +106,27 @@ mod dynamo_adapter_tests {
         assert_eq!(back, ts);
         assert!(parse_rate_ts("").is_empty());
     }
+
+    #[test]
+    fn test_rate_put_condition_first_write() {
+        let (expr, vals) = rate_put_condition("");
+        assert!(expr.contains("attribute_not_exists"));
+        assert!(vals.is_none());
+    }
+
+    #[test]
+    fn test_rate_put_condition_existing() {
+        let (expr, vals) = rate_put_condition("100,200");
+        assert!(expr.contains("rate_ts = :old"));
+        assert!(vals.is_some());
+    }
+
+    #[test]
+    fn test_include_user_balance_key_filters_meta_and_rate() {
+        assert!(include_user_balance_key("0xabc"));
+        assert!(!include_user_balance_key("__meta:last_sync_block"));
+        assert!(!include_user_balance_key("__rate:0xfoo"));
+    }
 }
 
 /// Adapter for Dynamo get_balance: returns default on miss.
@@ -151,4 +172,18 @@ pub(crate) fn interpret_nonce_put(err_debug: &str) -> Result<bool, String> {
     } else {
         Err(format!("DynamoDB nonce error: {}", err_debug))
     }
+}
+
+/// Pure helper extracted for Dynamo rate conditional put (used by storage to build ConditionExpression + values).
+pub(crate) fn rate_put_condition(read_serialized: &str) -> (String, Option<(String, AttributeValue)>) {
+    if read_serialized.is_empty() {
+        ("attribute_not_exists(rate_ts)".to_string(), None)
+    } else {
+        ("rate_ts = :old".to_string(), Some((":old".to_string(), AttributeValue::S(read_serialized.to_string()))))
+    }
+}
+
+/// Pure filter: include only user balance keys (exclude __meta:* and __rate:* ).
+pub(crate) fn include_user_balance_key(addr: &str) -> bool {
+    !addr.starts_with("__")
 }

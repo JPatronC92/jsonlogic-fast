@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
+    // Initialize tracing subscriber so info!/warn! in evaluate handler produce output (matches lambda.rs)
+    tracing_subscriber::fmt::init();
     let balances_table = env::var("BALANCES_TABLE").unwrap_or_else(|_| "B2A_Balances".to_string());
     let nonces_table = env::var("NONCES_TABLE").unwrap_or_else(|_| "B2A_Nonces".to_string());
 

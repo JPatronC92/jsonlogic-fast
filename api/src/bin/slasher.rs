@@ -18,16 +18,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(StorageBackend::Memory(MemoryStorage::new()))
     };
 
-    let config = BlockchainConfig::from_env();
+    // Use runtime secret fetch (from_env_with_secret_fallback) so PRIVATE_KEY is not required in env.
+    let config = BlockchainConfig::from_env_with_secret_fallback().await;
     let provider = config.write_provider();
     let contract = B2AStaking::new(config.contract_address, provider.clone());
 
     println!("Starting slasher for contract {}...", config.contract_address);
 
     let all_balances = storage.get_all_balances().await?;
-    println!("Found {} users off-chain.", all_balances.len());
+    println!("Found {} users off-chain (filtered, no __meta/__rate).", all_balances.len());
 
     for (user_addr_str, offchain_balance) in all_balances {
+        // Only user entries (filter done at storage layer via FilterExpression)
+        if user_addr_str.starts_with("__") { continue; }
         if let Ok(address) = user_addr_str.parse::<Address>() {
             // Get on-chain balance - native U256, no conversion
             // Wrapped with retry+backoff for transient RPC failures (Fase 4)

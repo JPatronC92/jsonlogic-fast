@@ -5,11 +5,10 @@ data "archive_file" "slasher_zip" {
   output_path = "slasher_payload.zip"
 }
 
-# Load private key securely from Secrets Manager (not passed via TF var)
-# For prod: ensure secret b2a/slasher-private-key-prod exists in AWS Secrets (see prod secrets setup in roadmap).
-data "aws_secretsmanager_secret_version" "slasher_private_key" {
-  secret_id = "b2a/slasher-private-key-${var.environment}"
-}
+# Private key loaded at runtime from AWS Secrets Manager (no TF-time injection into env vars).
+# IAM grants GetSecretValue; binary uses aws-sdk-secretsmanager + aws-config.
+# Secret name convention: b2a/slasher-private-key-<environment>
+# For prod: ensure secret b2a/slasher-private-key-prod exists (see roadmap).
 
 # IAM Role for B2A Slasher Lambda (least privilege - read only on balances)
 resource "aws_iam_role" "b2a_slasher_lambda_role" {
@@ -59,7 +58,7 @@ resource "aws_iam_role_policy" "b2a_slasher_dynamodb_policy" {
       {
         Effect = "Allow"
         Action = "secretsmanager:GetSecretValue"
-        Resource = "arn:aws:secretsmanager:*:*:secret:b2a/slasher-private-key-${var.environment}-*"
+        Resource = "arn:aws:secretsmanager:*:*:secret:b2a/slasher-private-key-${var.environment}*"
       }
     ]
   })
@@ -84,7 +83,7 @@ resource "aws_lambda_function" "b2a_slasher" {
       NONCES_TABLE    = aws_dynamodb_table.b2a_nonces.name
       RPC_URL         = var.rpc_url
       CONTRACT_ADDRESS= var.contract_address
-      PRIVATE_KEY     = data.aws_secretsmanager_secret_version.slasher_private_key.secret_string
+      # PRIVATE_KEY is NO LONGER injected; fetched at runtime from Secrets Manager by the binary
     }
   }
 

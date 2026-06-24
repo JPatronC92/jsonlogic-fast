@@ -7,6 +7,10 @@ use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
+// Added for runtime secret fetch (no TF injection)
+use aws_config;
+use aws_sdk_secretsmanager::Client as SecretsManagerClient;
+
 sol! {
     #[allow(missing_docs)]
     #[sol(rpc)]
@@ -26,16 +30,32 @@ pub struct BlockchainConfig {
 }
 
 impl BlockchainConfig {
+    /// Sync fallback for local/dev when PRIVATE_KEY is explicitly set in env.
     pub fn from_env() -> Self {
         // Default to Base Sepolia for dev/test. For production (Fase 4) set RPC_URL=https://mainnet.base.org
         // CONTRACT_ADDRESS must be the deployed B2AStaking on Base Mainnet.
-        // Prod secrets: load PRIVATE_KEY (and other keys) from AWS Secrets Manager using b2a/*-<environment> names (see TF).
-        // See roadmap for go-live checklist and prod setup instructions.
+        // IMPORTANT: For production use from_env_with_secret_fallback() so PRIVATE_KEY is never required in Lambda env.
         let rpc_url = env::var("RPC_URL").unwrap_or_else(|_| "https://sepolia.base.org".to_string());
         let private_key = env::var("PRIVATE_KEY").unwrap_or_else(|_| "0000000000000000000000000000000000000000000000000000000000000001".to_string());
         let contract_address_str = env::var("CONTRACT_ADDRESS").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
 
         let contract_address = contract_address_str.parse().expect("Invalid contract address");
+
+        Self {
+            rpc_url,
+            private_key,
+            contract_address,
+        }
+    }
+
+    /// Preferred for slasher Lambda: falls back to runtime fetch from Secrets Manager.
+    /// Secret name: b2a/slasher-private-key-<ENVIRONMENT or dev>
+    pub async fn from_env_with_secret_fallback() -> Self {
+        let rpc_url = env::var("RPC_URL").unwrap_or_else(|_| "https://sepolia.base.org".to_string());
+        let contract_address_str = env::var("CONTRACT_ADDRESS").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
+        let contract_address = contract_address_str.parse().expect("Invalid contract address");
+
+        let private_key = resolve_private_key().await;
 
         Self {
             rpc_url,
@@ -57,6 +77,44 @@ impl BlockchainConfig {
                 .connect_http(self.rpc_url.parse().unwrap())
         )
     }
+}
+
+/// Resolve private key preferring explicit PRIVATE_KEY env (local/dev), else fetch from Secrets Manager at runtime.
+/// This removes the need to inject secrets into Lambda environment variables at deploy time.
+async fn resolve_private_key() -> String {
+    if let Ok(k) = env::var("PRIVATE_KEY") {
+        let trimmed = k.trim();
+        if !trimmed.is_empty() && trimmed != "0000000000000000000000000000000000000000000000000000000000000001" {
+            return trimmed.to_string();
+        }
+    }
+
+    // Runtime fetch from Secrets Manager (requires IAM GetSecretValue for b2a/slasher-... )
+    let aws_config = aws_config::load_from_env().await;
+    let sm_client = SecretsManagerClient::new(&aws_config);
+
+    let env_name = env::var("ENVIRONMENT").unwrap_or_else(|_| "dev".to_string());
+    let secret_id = env::var("SLASHER_KEY_SECRET")
+        .unwrap_or_else(|_| format!("b2a/slasher-private-key-{}", env_name));
+
+    match sm_client.get_secret_value()
+        .secret_id(secret_id.clone())
+        .send()
+        .await {
+        Ok(out) => {
+            if let Some(s) = out.secret_string {
+                return s;
+            }
+            // fallback to secret_binary if base64, but we use string
+            eprintln!("Secret {} had no secret_string", secret_id);
+        }
+        Err(e) => {
+            eprintln!("Failed loading secret {} from SecretsManager (using dummy): {:?}", secret_id, e);
+        }
+    }
+
+    // last resort dummy (will fail on chain unless test)
+    "0000000000000000000000000000000000000000000000000000000000000001".to_string()
 }
 
 /// Simple exponential backoff retry wrapper for fallible async operations.
