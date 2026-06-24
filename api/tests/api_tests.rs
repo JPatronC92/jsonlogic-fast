@@ -433,20 +433,20 @@ async fn test_dynamo_get_all_balances_guarded() {
 
 #[tokio::test]
 async fn test_siwe_chain_mismatch_unauthorized() {
-    std::env::set_var("SIWE_DOMAIN", "localhost:3000");
-    std::env::set_var("SIWE_URI", "http://localhost:3000/v1/evaluate");
-    std::env::set_var("SIWE_CHAIN_ID", "999"); // force mismatch vs message Chain ID: 1
+    // Direct call to the pure(ish) verify_siwe to reliably exercise the chain mismatch path
+    // (the check happens before signature verification).
+    std::env::set_var("SIWE_CHAIN_ID", "999");
 
-    let storage = MemoryStorage::new();
-    let state = AppState { storage: Arc::new(StorageBackend::Memory(storage)) };
-    let app = create_app(state);
-
-    // Message declares chain 1; env=999 => verify_siwe returns chain mismatch before crypto verify
     let siwe = "localhost:3000 wants you to sign in with your Ethereum account:\n0x0000000000000000000000000000000000000000\n\nSign in.\n\nURI: http://localhost:3000/v1/evaluate\nVersion: 1\nChain ID: 1\nNonce: mm\nIssued At: 2026-06-24T00:00:00Z";
-    let payload = json!({"message": siwe, "signature": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "rule": {"==":[1,1]}, "data": {}});
-    let req = Request::builder().method("POST").uri("/v1/evaluate").header("content-type", "application/json").body(Body::from(serde_json::to_vec(&payload).unwrap())).unwrap();
-    let res = app.oneshot(req).await.unwrap();
-    // Must be UNAUTHORIZED because chain mismatch (or sig) was detected inside verify_siwe.
-    // The important thing is the bad SIWE_CHAIN_ID=999 path was exercised.
-    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    // Garbage signature is fine — we never reach crypto verify.
+    let res = jsonlogic_fast::b2a::auth::verify_siwe(
+        siwe,
+        "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        Some("localhost:3000"),
+        Some("http://localhost:3000/v1/evaluate"),
+    ).await;
+
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    assert!(err.contains("Chain ID mismatch"), "expected specific chain mismatch, got: {}", err);
 }
