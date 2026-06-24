@@ -1,4 +1,4 @@
-use api::blockchain::{BlockchainConfig, B2AStaking};
+use api::blockchain::{BlockchainConfig, B2AStaking, retry_with_backoff};
 use api::storage::{DynamoStorage, MemoryStorage, StorageBackend};
 use alloy::providers::Provider;
 use alloy::rpc::types::eth::Filter;
@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Primera ejecución: backfill reciente (configurable)
     if last_block == 0 {
-        match provider.get_block_number().await {
+        match retry_with_backoff(|| async { provider.get_block_number().await }, 3, 500).await {
             Ok(latest) => {
                 last_block = latest.saturating_sub(200);
                 log_info("first_run_backfill", Some(json!({ "start_block": last_block })));
@@ -83,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let from_block = last_block + 1;
 
-    let latest = match provider.get_block_number().await {
+    let latest = match retry_with_backoff(|| async { provider.get_block_number().await }, 3, 500).await {
         Ok(n) => n,
         Err(e) => {
             log_error("get_latest_block_failed", Some(json!({ "error": e.to_string() })));
@@ -112,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .to_block(to_block)
         .event_signature(B2AStaking::Deposited::SIGNATURE_HASH);
 
-    let logs = match provider.get_logs(&filter).await {
+    let logs = match retry_with_backoff(|| async { provider.get_logs(&filter).await }, 3, 500).await {
         Ok(l) => l,
         Err(e) => {
             log_error("get_logs_failed", Some(json!({ "error": e.to_string(), "from": from_block, "to": to_block })));

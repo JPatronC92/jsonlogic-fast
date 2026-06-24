@@ -1,4 +1,4 @@
-use api::blockchain::{BlockchainConfig, B2AStaking};
+use api::blockchain::{BlockchainConfig, B2AStaking, retry_with_backoff};
 use api::storage::{DynamoStorage, MemoryStorage, StorageBackend};
 use alloy_primitives::{Address, U256};
 use std::env;
@@ -30,7 +30,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (user_addr_str, offchain_balance) in all_balances {
         if let Ok(address) = user_addr_str.parse::<Address>() {
             // Get on-chain balance - native U256, no conversion
-            let onchain_balance: U256 = contract.balances(address).call().await?;
+            // Wrapped with retry+backoff for transient RPC failures (Fase 4)
+            let onchain_balance: U256 = retry_with_backoff(|| async { contract.balances(address).call().await }, 3, 500).await?;
 
             println!("User {}: On-chain: {}, Off-chain: {}", address, onchain_balance, offchain_balance);
 
@@ -42,11 +43,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if diff > dust_threshold {
                     println!("Slashing {} for user {}", diff, address);
-                    match contract.slash(address, diff).send().await {
+                    // Wrapped send with retry for transient failures (Fase 4 resilience)
+                    match retry_with_backoff(|| async { contract.slash(address, diff).send().await }, 3, 500).await {
                         Ok(tx) => {
                             println!("Slash tx sent: {:?}", tx.tx_hash());
+                            // Confirmation watch is best-effort (tx may be already confirmed or chain delay); no full retry to avoid consuming
                             let _ = tx.watch().await;
-                            println!("Slash tx confirmed!");
+                            println!("Slash tx confirmed (or timeout on watch)!");
                         }
                         Err(e) => eprintln!("Failed to slash {}: {}", address, e),
                     }

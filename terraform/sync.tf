@@ -2,6 +2,7 @@
 #
 # Modo polling HTTP (no WebSocket) para máxima confiabilidad en Lambda.
 # Se ejecuta cada pocos minutos vía EventBridge.
+# Fase 4 / Prod: configure RPC to mainnet.base.org via var; use appropriate schedule and max blocks for mainnet costs.
 # Mantiene estado del último bloque en la tabla de balances (meta).
 #
 # Este worker es crítico para el modelo B2A: acredita los depósitos on-chain

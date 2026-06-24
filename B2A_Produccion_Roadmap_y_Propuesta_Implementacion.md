@@ -333,4 +333,43 @@ Si se implementara exitosamente el cobro de 0.5% sobre beneficio:
 - Se evaluó el modelo de cobro automático de royalty propuesto.
 - Se mantiene recomendación de avanzar primero con un peaje por cómputo trustless robusto.
 
-¿Deseas que convierta alguna sección en tickets concretos (GitHub Issues) o que profundice en algún apartado específico (por ejemplo, diseño detallado del Sync Worker o estimación más granular de costos)?
+¿Deseas que convierta alguna sección en tickets concretos (GitHub Issues) o que profundice en algún apartado específico (por ejemplo, diseño detallado del Sync Worker o estimación más granular de costos)?---
+
+## 11. Fase 4 - Go-Live Checklist (Pre-Producción / Mainnet Readiness)
+
+This section was added during Fase 4 implementation on eature-b2a-fase4-operacion.
+
+### Pre-Deployment Gates
+- [ ] cargo test (api/) + unit tests for retry/backoff pass with no regressions.
+- [ ] All Fase 3 hardening (pure module, thin wrappers, real asserts, clean tree) merged and verified in source-of-truth.
+- [ ] Terraform plan succeeds for environment=prod (no apply without review).
+- [ ] Final IAM least-privilege review for Lambda roles (sync, slasher, api) - no wildcards on resources.
+- [ ] Monitoring & alarms configured and tested (CloudWatch for sync failures, slasher errors, rate limits).
+- [ ] Retry/backoff active in sync_deposits and slasher for get_block_number, get_logs, balances.call, slash.send.
+
+### Contract & On-Chain
+- [ ] B2AStaking contract deployed on **Base Mainnet** (use 2a_smart_contract.sol).
+- [ ] CONTRACT_ADDRESS updated in prod secrets / TF vars for mainnet.
+- [ ] Ownership / access control verified on mainnet contract (no test keys).
+- [ ] Sample mainnet RPC verified: https://mainnet.base.org (or Alchemy/Infura equiv).
+
+### Secrets & Config (Prod)
+- [ ] AWS Secrets created/updated:
+  - 2a/slasher-private-key-prod
+  - 2a/api-private-key-prod (if separate)
+  - Any RPC keys if using authenticated provider.
+- [ ] Secrets never in git, TF state, or logs. Loaded only at runtime via Secrets Manager.
+- [ ] Prod env vars: RPC_URL=https://mainnet.base.org , ENVIRONMENT=prod , USE_DYNAMODB=true , SYNC_MAX_BLOCKS tuned.
+
+### Post-Deploy / Ops
+- [ ] First sync worker run on prod observes real deposits (test with small on-chain tx).
+- [ ] Slasher round executes without error on prod balances; watch tx confirmation.
+- [ ] CloudWatch logs + alarms fire correctly on injected failures (retry path exercised).
+- [ ] Go-live decision documented (sign-off on checklist above + metrics).
+
+### Test Gates (before any mainnet funds)
+- All unit + integration tests (Memory + Dynamo when possible) green.
+- Manual smoke via python clients on test endpoint if sandbox available.
+- No direct changes to main; all via PR to source-of-truth branch.
+
+Update this checklist as items complete. Reference: Fase 4 items (resilience, mainnet prep, checklist) in eature-b2a-fase4-operacion.
