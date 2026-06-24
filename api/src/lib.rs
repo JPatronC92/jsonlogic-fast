@@ -15,7 +15,7 @@ static REQ_COUNTER: AtomicU64 = AtomicU64::new(1);
 pub mod storage;
 pub mod blockchain;
 mod hardening;
-use storage::{StorageBackend, B2AStorageError};
+use storage::StorageBackend;
 
 #[derive(Clone)]
 pub struct AppState {
