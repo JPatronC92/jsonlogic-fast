@@ -124,7 +124,12 @@ resource "aws_lambda_function" "b2a_api" {
       BALANCES_TABLE  = aws_dynamodb_table.b2a_balances.name
       NONCES_TABLE    = aws_dynamodb_table.b2a_nonces.name
       RPC_URL         = var.rpc_url
-      CONTRACT_ADDRESS= var.contract_address
+      CONTRACT_ADDRESS   = var.contract_address
+      SIWE_DOMAIN       = var.siwe_domain
+      SIWE_URI          = var.siwe_uri
+      SIWE_CHAIN_ID     = var.siwe_chain_id
+      SIWE_MAX_AGE_SECS = var.siwe_max_age_secs
+      ENVIRONMENT       = var.environment
     }
   }
 

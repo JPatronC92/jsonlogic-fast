@@ -1,13 +1,16 @@
 name: Build and Deploy
 
 on:
-  push:
-    branches:
-      - feature-b2a-api*
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Terraform environment to plan"
+        required: true
+        default: "dev"
 
 jobs:
   build_and_deploy:
-    name: Build Rust Lambdas and Apply Terraform
+    name: Build Rust Lambdas and Plan Terraform
     runs-on: ubuntu-latest
 
     env:
@@ -68,12 +71,8 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ./terraform
-        run: terraform plan -out=tfplan
+        run: terraform plan -var="environment=${{ github.event.inputs.environment }}" -out=tfplan
         # PRIVATE_KEY y otros secretos se cargan desde AWS Secrets Manager (no se pasan por variables)
 
-      - name: Terraform Apply
-        # Se aplica en ramas feature-b2a-* (main no se toca)
-        if: startsWith(github.ref, 'refs/heads/feature-b2a')
-        working-directory: ./terraform
-        run: terraform apply -auto-approve tfplan
-        # Secrets (incluyendo private keys) se cargan desde AWS Secrets Manager en los manifiestos
+      # Terraform apply is intentionally not automated for feature branches.
+      # Operators must review the plan and apply manually outside CI.

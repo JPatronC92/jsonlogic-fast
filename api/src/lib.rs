@@ -1,20 +1,27 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::post, Json, Router};
+use axum::{
+    extract::State,
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
+};
 use jsonlogic_fast::b2a::{
     auth::verify_siwe,
     pricing::{calculate_rule_depth, estimate_cost},
 };
 use jsonlogic_fast::CompiledRule;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 // Simple request ID counter (no extra uuid dep)
 static REQ_COUNTER: AtomicU64 = AtomicU64::new(1);
 
-pub mod storage;
+pub mod api_key_auth;
 pub mod blockchain;
 mod hardening;
+pub mod storage;
+use api_key_auth::ApiKeyAuth;
 use storage::StorageBackend;
 
 #[derive(Clone)]
@@ -24,8 +31,10 @@ pub struct AppState {
 
 #[derive(Deserialize)]
 pub struct EvaluateRequest {
-    pub message: String,
-    pub signature: String,
+    #[serde(default)]
+    pub message: Option<String>,
+    #[serde(default)]
+    pub signature: Option<String>,
     pub rule: serde_json::Value,
     pub data: serde_json::Value,
 }
@@ -49,6 +58,49 @@ pub struct EstimateResponse {
     pub estimated_cost: String,
 }
 
+#[derive(Serialize)]
+pub struct UsageResponse {
+    pub owner: String,
+    pub plan: String,
+    pub monthly_limit: u64,
+    pub used_this_month: u64,
+    pub remaining_this_month: u64,
+    pub rate_limit_per_minute: u32,
+}
+
+pub async fn health() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({"status":"ok","service":"jsonlogic-fast-b2a"})),
+    )
+}
+
+pub async fn usage(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let key = ApiKeyAuth::from_headers(&headers)
+        .ok_or((StatusCode::UNAUTHORIZED, "Missing bearer token".to_string()))?;
+    let record = state
+        .storage
+        .get_api_key(&key.hash)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .filter(|r| r.active)
+        .ok_or((StatusCode::UNAUTHORIZED, "Invalid API key".to_string()))?;
+    Ok((
+        StatusCode::OK,
+        Json(UsageResponse {
+            owner: record.owner,
+            plan: record.plan,
+            monthly_limit: record.monthly_limit,
+            used_this_month: record.used_this_month,
+            remaining_this_month: record.monthly_limit.saturating_sub(record.used_this_month),
+            rate_limit_per_minute: record.rate_limit_per_minute,
+        }),
+    ))
+}
+
 pub async fn estimate(Json(payload): Json<EstimateRequest>) -> impl IntoResponse {
     let cost = estimate_cost(payload.rule_depth, payload.batch_size);
     (
@@ -61,89 +113,126 @@ pub async fn estimate(Json(payload): Json<EstimateRequest>) -> impl IntoResponse
 
 pub async fn evaluate(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<EvaluateRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    // Valores esperados (pueden venir de env o config en producci├│n)
-    // Para agentes, se recomienda fijar domain y uri estrictos.
-    let expected_domain = std::env::var("SIWE_DOMAIN").ok();
-    let expected_uri = std::env::var("SIWE_URI").ok();
-
-    // Llamada con verificaci├│n estricta + devuelve el Message completo
-    let (wallet_address, siwe_msg) = verify_siwe(
-        &payload.message,
-        &payload.signature,
-        expected_domain.as_deref(),
-        expected_uri.as_deref(),
-    )
-    .await
-    .map_err(|e| (StatusCode::UNAUTHORIZED, e))?;
-
     let req_id = format!("req-{}", REQ_COUNTER.fetch_add(1, Ordering::Relaxed));
-    tracing::info!(req_id = %req_id, wallet = %wallet_address, "authenticated evaluate request");
-
-    // Ya no re-parseamos: usamos el Message devuelto por verify_siwe
-    let nonce_valid = state
-        .storage
-        .check_and_record_nonce(&wallet_address, siwe_msg.nonce.as_str())
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if !nonce_valid {
-        tracing::warn!(req_id = %req_id, wallet = %wallet_address, "nonce replay detected");
-        return Err((StatusCode::UNAUTHORIZED, "Nonce already used (replay attack detected)".into()));
-    }
-
-    // Basic rate limiting: 10 requests per minute per wallet.
-    // Treat Err (e.g. transient put after allow, or get miss) as allow (fail-open) to avoid 500 for rate.
-    // Only explicit false from pure decision -> 429.
-    let rate_result = state.storage.check_and_record_request(&wallet_address, 60, 10).await;
-    let rate_ok = match rate_result {
-        Ok(b) => b,
-        Err(_) => true, // fail-open as before (rate errors treated as allow)
-    };
-    if !rate_ok {
-        tracing::warn!(req_id = %req_id, wallet = %wallet_address, "rate limit exceeded");
-        return Err((StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded".into()));
-    }
-
-    tracing::debug!(req_id = %req_id, "rate and nonce passed, computing rule");
-
-    // Compute/evaluate BEFORE charging (high priority audit fix).
-    // This guarantees the agent never pays for a failed evaluation.
-    // If deduct fails after successful eval, the result is not returned (revenue risk accepted; documented).
     let depth = calculate_rule_depth(&payload.rule);
-    let size = if payload.data.is_array() {
-        payload.data.as_array().unwrap().len()
-    } else {
-        1
+    let contexts: Vec<String> = match payload.data.as_array() {
+        Some(items) => items.iter().map(serde_json::Value::to_string).collect(),
+        None => vec![payload.data.to_string()],
     };
-    let cost = estimate_cost(depth, size);
+    let evaluations = contexts.len() as u64;
+    let cost = estimate_cost(depth, contexts.len());
 
-    let rule_json_str = payload.rule.to_string();
-    let data_json_str = payload.data.to_string();
-
-    let rule = CompiledRule::new(&rule_json_str)
+    let rule = CompiledRule::new(&payload.rule.to_string())
         .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid rule: {:?}", e)))?;
 
-    let result = rule.evaluate(&data_json_str).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Evaluation failed: {:?}", e),
+    let api_key_auth = ApiKeyAuth::from_headers(&headers);
+    let wallet_address = if let Some(api_key) = api_key_auth {
+        let record = state
+            .storage
+            .get_api_key(&api_key.hash)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+            .filter(|r| r.active)
+            .ok_or((StatusCode::UNAUTHORIZED, "Invalid API key".to_string()))?;
+
+        let rate_ok = state
+            .storage
+            .check_and_record_request(
+                &format!("api_key:{}", api_key.hash),
+                60,
+                record.rate_limit_per_minute,
+            )
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        if !rate_ok {
+            return Err((StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded".into()));
+        }
+        state
+            .storage
+            .increment_api_key_usage(&api_key.hash, evaluations)
+            .await
+            .map_err(|e| match e {
+                storage::B2AStorageError::InsufficientFunds => (
+                    StatusCode::PAYMENT_REQUIRED,
+                    "Monthly free tier limit exceeded".to_string(),
+                ),
+                storage::B2AStorageError::Other(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            })?;
+        tracing::info!(req_id = %req_id, owner = %record.owner, evaluations = evaluations, "api key evaluate request");
+        None
+    } else {
+        let message = payload
+            .message
+            .as_deref()
+            .ok_or((StatusCode::UNAUTHORIZED, "Missing SIWE message".to_string()))?;
+        let signature = payload.signature.as_deref().ok_or((
+            StatusCode::UNAUTHORIZED,
+            "Missing SIWE signature".to_string(),
+        ))?;
+        let expected_domain = std::env::var("SIWE_DOMAIN").ok();
+        let expected_uri = std::env::var("SIWE_URI").ok();
+        let (wallet_address, siwe_msg) = verify_siwe(
+            message,
+            signature,
+            expected_domain.as_deref(),
+            expected_uri.as_deref(),
         )
-    })?;
-
-    let result_value: serde_json::Value =
-        serde_json::from_str(&result.to_string()).unwrap_or(serde_json::Value::Null);
-
-    // Charge only after successful rule evaluation/compilation.
-    state.storage.deduct_balance(&wallet_address, cost)
         .await
-        .map_err(|e| match e {
-            storage::B2AStorageError::InsufficientFunds => (StatusCode::PAYMENT_REQUIRED, "Insufficient funds".to_string()),
-            storage::B2AStorageError::Other(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
-        })?;
+        .map_err(|e| (StatusCode::UNAUTHORIZED, e))?;
+        let nonce_valid = state
+            .storage
+            .check_and_record_nonce(&wallet_address, siwe_msg.nonce.as_str())
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        if !nonce_valid {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                "Nonce already used (replay attack detected)".into(),
+            ));
+        }
+        let rate_ok = state
+            .storage
+            .check_and_record_request(&wallet_address, 60, 10)
+            .await
+            .unwrap_or(true);
+        if !rate_ok {
+            return Err((StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded".into()));
+        }
+        Some(wallet_address)
+    };
 
-    tracing::info!(req_id = %req_id, cost = %cost.to_string(), "deduct successful; returning result");
+    let result_value = if contexts.len() == 1 {
+        rule.evaluate(&contexts[0]).map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Evaluation failed: {:?}", e),
+            )
+        })?
+    } else {
+        serde_json::Value::Array(rule.evaluate_batch(&contexts).map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Evaluation failed: {:?}", e),
+            )
+        })?)
+    };
+
+    if let Some(wallet_address) = wallet_address {
+        state
+            .storage
+            .deduct_balance(&wallet_address, cost)
+            .await
+            .map_err(|e| match e {
+                storage::B2AStorageError::InsufficientFunds => (
+                    StatusCode::PAYMENT_REQUIRED,
+                    "Insufficient funds".to_string(),
+                ),
+                storage::B2AStorageError::Other(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            })?;
+    }
 
     Ok((
         StatusCode::OK,
@@ -156,6 +245,8 @@ pub async fn evaluate(
 
 pub fn create_app(state: AppState) -> Router {
     Router::new()
+        .route("/health", get(health))
+        .route("/v1/usage", get(usage))
         .route("/v1/estimate", post(estimate))
         .route("/v1/evaluate", post(evaluate))
         .with_state(state)

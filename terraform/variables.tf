@@ -46,3 +46,27 @@ variable "sync_schedule" {
   type        = string
   default     = "rate(2 minutes)"
 }
+
+variable "siwe_domain" {
+  description = "Expected SIWE domain for B2A API auth"
+  type        = string
+  default     = ""
+}
+
+variable "siwe_uri" {
+  description = "Expected SIWE URI for B2A API auth"
+  type        = string
+  default     = ""
+}
+
+variable "siwe_chain_id" {
+  description = "Expected SIWE chain id"
+  type        = string
+  default     = "1"
+}
+
+variable "siwe_max_age_secs" {
+  description = "Maximum accepted SIWE message age in seconds"
+  type        = string
+  default     = "3600"
+}

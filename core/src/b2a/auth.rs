@@ -3,7 +3,7 @@ use std::str::FromStr;
 use time::OffsetDateTime;
 
 /// Verifica una firma SIWE de forma estricta.
-/// 
+///
 /// - Valida la firma criptogr├ífica.
 /// - (Opcional) Valida domain y uri esperados.
 /// - Devuelve el address y el Message completo para extraer nonce sin re-parsing.
@@ -36,7 +36,10 @@ pub async fn verify_siwe(
         .and_then(|s| s.parse().ok())
         .unwrap_or(1);
     if message.chain_id != expected_chain {
-        return Err(format!("Chain ID mismatch: expected {}, got {}", expected_chain, message.chain_id));
+        return Err(format!(
+            "Chain ID mismatch: expected {}, got {}",
+            expected_chain, message.chain_id
+        ));
     }
 
     // issued_at temporal window (default 5min) - use unix timestamps (siwe::TimeStamp vs OffsetDateTime)
@@ -48,7 +51,10 @@ pub async fn verify_siwe(
     let issued: OffsetDateTime = *message.issued_at.as_ref();
     let age = now - issued;
     if age.whole_seconds() > max_age_secs || age.whole_seconds() < -60 {
-        return Err(format!("issued_at outside allowed window ({}s)", max_age_secs));
+        return Err(format!(
+            "issued_at outside allowed window ({}s)",
+            max_age_secs
+        ));
     }
 
     // Validaci├│n estricta de URI (si se provee) para cumplir con recomendaciones de S1 del roadmap
@@ -80,7 +86,10 @@ pub fn validate_siwe_metadata(
 ) -> Result<(), String> {
     let chain = expected_chain.unwrap_or(1);
     if message.chain_id != chain {
-        return Err(format!("Chain ID mismatch: expected {}, got {}", chain, message.chain_id));
+        return Err(format!(
+            "Chain ID mismatch: expected {}, got {}",
+            chain, message.chain_id
+        ));
     }
     let max_age = max_age_secs.unwrap_or(300);
     let issued: time::OffsetDateTime = *message.issued_at.as_ref();

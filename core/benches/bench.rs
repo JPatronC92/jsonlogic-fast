@@ -1,5 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use jsonlogic_fast::{evaluate, evaluate_batch_numeric, evaluate_numeric};
+use std::hint::black_box;
 
 fn bench_single_numeric_evaluation(c: &mut Criterion) {
     let rule = r#"{"*":[{"var":"amount"},0.029]}"#;

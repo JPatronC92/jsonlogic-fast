@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use alloy_primitives::U256;
 use aws_sdk_dynamodb::types::AttributeValue;
+use std::collections::HashMap;
 
 /// Default balance for unseen addresses (no auto-seed of 10).
 pub fn default_balance() -> U256 {
@@ -21,7 +21,12 @@ pub fn nonce_allow(now: u64, ttl: u64, key: &str, seen: &mut HashMap<String, u64
 
 /// Returns true if request allowed within window (len < max after clean).
 /// `timestamps` is the list for this address, mutated (push if allow).
-pub fn rate_limit_allow(now: u64, window_secs: u64, max_requests: u32, timestamps: &mut Vec<u64>) -> bool {
+pub fn rate_limit_allow(
+    now: u64,
+    window_secs: u64,
+    max_requests: u32,
+    timestamps: &mut Vec<u64>,
+) -> bool {
     timestamps.retain(|&ts| now - ts < window_secs);
     if timestamps.len() as u32 >= max_requests {
         false
@@ -61,7 +66,7 @@ mod hardening_logic_tests {
             assert!(rate_limit_allow(now + i, win, max, &mut ts));
         }
         assert!(!rate_limit_allow(now + 10, win, max, &mut ts)); // 11th deny
-        // after window, allows again
+                                                                 // after window, allows again
         assert!(rate_limit_allow(now + 100, win, max, &mut ts));
     }
 }
@@ -93,7 +98,10 @@ mod dynamo_adapter_tests {
 
     #[test]
     fn test_dynamo_nonce_replay_maps_false() {
-        assert_eq!(interpret_nonce_put("...ConditionalCheckFailedException..."), Ok(false));
+        assert_eq!(
+            interpret_nonce_put("...ConditionalCheckFailedException..."),
+            Ok(false)
+        );
         assert!(interpret_nonce_put("other err").is_err());
         // success case (no err from put) is handled as Ok(true) in wrapper, not passed to interpret
     }
@@ -150,18 +158,24 @@ pub(crate) fn parse_rate_ts(s: &str) -> Vec<u64> {
     if s.is_empty() {
         return vec![];
     }
-    s.split(',')
-        .filter_map(|p| p.parse::<u64>().ok())
-        .collect()
+    s.split(',').filter_map(|p| p.parse::<u64>().ok()).collect()
 }
 
 /// Serialize Vec to "ts1,ts2,..."
 pub(crate) fn serialize_rate_ts(ts: &[u64]) -> String {
-    ts.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(",")
+    ts.iter()
+        .map(|t| t.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 /// Decision for Dynamo rate: load vec, call pure allow, return bool.
-pub(crate) fn dynamo_rate_decide(now: u64, window_secs: u64, max_requests: u32, timestamps: &mut Vec<u64>) -> bool {
+pub(crate) fn dynamo_rate_decide(
+    now: u64,
+    window_secs: u64,
+    max_requests: u32,
+    timestamps: &mut Vec<u64>,
+) -> bool {
     rate_limit_allow(now, window_secs, max_requests, timestamps)
 }
 
@@ -175,15 +189,41 @@ pub(crate) fn interpret_nonce_put(err_debug: &str) -> Result<bool, String> {
 }
 
 /// Pure helper extracted for Dynamo rate conditional put (used by storage to build ConditionExpression + values).
-pub(crate) fn rate_put_condition(read_serialized: &str) -> (String, Option<(String, AttributeValue)>) {
+pub(crate) fn rate_put_condition(
+    read_serialized: &str,
+) -> (String, Option<(String, AttributeValue)>) {
     if read_serialized.is_empty() {
         ("attribute_not_exists(rate_ts)".to_string(), None)
     } else {
-        ("rate_ts = :old".to_string(), Some((":old".to_string(), AttributeValue::S(read_serialized.to_string()))))
+        (
+            "rate_ts = :old".to_string(),
+            Some((
+                ":old".to_string(),
+                AttributeValue::S(read_serialized.to_string()),
+            )),
+        )
     }
 }
 
 /// Pure filter: include only user balance keys (exclude __meta:* and __rate:* ).
 pub(crate) fn include_user_balance_key(addr: &str) -> bool {
     !addr.starts_with("__")
+}
+
+/// Condition expression for Dynamo add_balance. Allows first deposit when the item does not exist,
+/// while preserving optimistic concurrency when a balance already exists.
+pub(crate) fn dynamo_add_balance_condition() -> &'static str {
+    "attribute_not_exists(balance) OR balance = :current_balance"
+}
+
+#[cfg(test)]
+mod dynamo_add_balance_tests {
+    use super::*;
+
+    #[test]
+    fn test_dynamo_add_balance_allows_new_items() {
+        let expr = dynamo_add_balance_condition();
+        assert!(expr.contains("attribute_not_exists(balance)"));
+        assert!(expr.contains("balance = :current_balance"));
+    }
 }

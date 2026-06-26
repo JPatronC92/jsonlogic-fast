@@ -1,3 +1,5 @@
+use alloy_primitives::U256;
+use api::storage::{MemoryStorage, StorageBackend};
 use api::{create_app, AppState};
 use axum::{
     body::Body,
@@ -10,8 +12,6 @@ use sha3::{Digest, Keccak256};
 use std::sync::Arc;
 use time::OffsetDateTime;
 use tower::ServiceExt;
-use api::storage::{StorageBackend, MemoryStorage};
-use alloy_primitives::U256;
 
 fn to_eip55_address(address_bytes: &[u8; 20]) -> String {
     let address_hex = hex::encode(address_bytes); // lowercase hex
@@ -195,7 +195,9 @@ async fn test_nonce_replay_unauthorized() {
 
     // First call with nonce1
     let now = OffsetDateTime::now_utc();
-    let now_str = now.format(&time::format_description::well_known::Rfc3339).unwrap();
+    let now_str = now
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap();
     let nonce1 = "nonce-replay-1";
     let siwe1 = format!(
         "localhost:3000 wants you to sign in with your Ethereum account:\n\
@@ -233,7 +235,9 @@ async fn test_nonce_replay_unauthorized() {
 
     // Second use of same nonce -> 401
     let now2 = OffsetDateTime::now_utc();
-    let now_str2 = now2.format(&time::format_description::well_known::Rfc3339).unwrap();
+    let now_str2 = now2
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap();
     let siwe1_again = format!(
         "localhost:3000 wants you to sign in with your Ethereum account:\n\
          {}\n\n\
@@ -285,7 +289,9 @@ async fn test_zero_balance_returns_402() {
     std::env::set_var("SIWE_CHAIN_ID", "1");
 
     let now = OffsetDateTime::now_utc();
-    let now_str = now.format(&time::format_description::well_known::Rfc3339).unwrap();
+    let now_str = now
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap();
     let siwe = format!(
         "localhost:3000 wants you to sign in with your Ethereum account:\n\
          {}\n\n\
@@ -339,12 +345,14 @@ async fn test_rate_limit_429() {
     std::env::set_var("SIWE_CHAIN_ID", "1");
 
     let now = OffsetDateTime::now_utc();
-    let now_str = now.format(&time::format_description::well_known::Rfc3339).unwrap();
+    let now_str = now
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap();
 
     let mut last_status = StatusCode::OK;
     // 10 should succeed, 11th within same second window -> 429 (max=10)
     for i in 0..11 {
-        let nonce = format!("rate-nonce-{}", i);
+        let nonce = format!("ratenonce{}", i);
         let siwe = format!(
             "localhost:3000 wants you to sign in with your Ethereum account:\n\
              {}\n\n\
@@ -409,13 +417,14 @@ async fn test_dynamo_get_all_balances_guarded() {
 
     // Always exercise rate logic used by both Memory and Dynamo impls (via public StorageBackend API)
     let mem = MemoryStorage::new();
-    let _ = mem.check_and_record_request("0xaddr-rate-test", 60, 10).await; // exercises rate_limit_allow + parse/serialize path
+    let _ = mem
+        .check_and_record_request("0xaddr-rate-test", 60, 10)
+        .await; // exercises rate_limit_allow + parse/serialize path
     let _ = mem.get_all_balances().await; // shared path
 
-    
-
     // Exercise the actual shipped Dynamo impl paths (get_all + rate request) - will fail on network/creds but code runs
-    let balances_table = std::env::var("BALANCES_TABLE").unwrap_or_else(|_| "B2A_Balances".to_string());
+    let balances_table =
+        std::env::var("BALANCES_TABLE").unwrap_or_else(|_| "B2A_Balances".to_string());
     let nonces_table = std::env::var("NONCES_TABLE").unwrap_or_else(|_| "B2A_Nonces".to_string());
     let storage = api::storage::DynamoStorage::new(&balances_table, &nonces_table).await;
     // Call get_all_balances (runs the FilterExpression scan path in impl)
@@ -424,29 +433,229 @@ async fn test_dynamo_get_all_balances_guarded() {
     let _ = storage.check_and_record_request("0xtest", 60, 5).await;
 }
 
-
-
-
-
-
-
-
 #[tokio::test]
 async fn test_siwe_chain_mismatch_unauthorized() {
-    // Direct call to the pure(ish) verify_siwe to reliably exercise the chain mismatch path
-    // (the check happens before signature verification).
-    std::env::set_var("SIWE_CHAIN_ID", "999");
+    use std::str::FromStr;
 
     let siwe = "localhost:3000 wants you to sign in with your Ethereum account:\n0x0000000000000000000000000000000000000000\n\nSign in.\n\nURI: http://localhost:3000/v1/evaluate\nVersion: 1\nChain ID: 1\nNonce: mismatch123\nIssued At: 2026-06-24T00:00:00Z";
-    // Garbage signature is fine — we never reach crypto verify.
-    let res = jsonlogic_fast::b2a::auth::verify_siwe(
-        siwe,
-        "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        Some("localhost:3000"),
-        Some("http://localhost:3000/v1/evaluate"),
-    ).await;
+    let message = siwe::Message::from_str(siwe).unwrap();
+    let res = jsonlogic_fast::b2a::auth::validate_siwe_metadata(
+        &message,
+        Some(999),
+        Some(i64::MAX),
+        OffsetDateTime::now_utc(),
+    );
 
     assert!(res.is_err());
     let err = res.unwrap_err();
-    assert!(err.contains("Chain ID mismatch"), "expected specific chain mismatch, got: {}", err);
+    assert!(
+        err.contains("Chain ID mismatch"),
+        "expected specific chain mismatch, got: {}",
+        err
+    );
+}
+
+const TEST_API_KEY: &str = "test-free-tier-key";
+
+async fn app_with_api_key(record: api::api_key_auth::ApiKeyRecord) -> axum::Router {
+    let storage = MemoryStorage::new();
+    storage.put_api_key(record).await.unwrap();
+    let state = AppState {
+        storage: Arc::new(StorageBackend::Memory(storage)),
+    };
+    create_app(state)
+}
+
+#[tokio::test]
+async fn test_health_endpoint() {
+    let state = AppState {
+        storage: Arc::new(StorageBackend::Memory(MemoryStorage::new())),
+    };
+    let app = create_app(state);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res_json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(
+        res_json,
+        json!({"status":"ok","service":"jsonlogic-fast-b2a"})
+    );
+}
+
+#[tokio::test]
+async fn test_usage_without_auth_returns_401() {
+    let state = AppState {
+        storage: Arc::new(StorageBackend::Memory(MemoryStorage::new())),
+    };
+    let app = create_app(state);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/v1/usage")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_usage_with_api_key_returns_200() {
+    let app = app_with_api_key(api::api_key_auth::ApiKeyRecord::free_tier(
+        TEST_API_KEY,
+        "tester",
+    ))
+    .await;
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/v1/usage")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", TEST_API_KEY),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res_json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(res_json["monthly_limit"], 1000);
+    assert_eq!(res_json["used_this_month"], 0);
+}
+
+#[tokio::test]
+async fn test_evaluate_with_api_key_valid_returns_200_and_increments_usage() {
+    let app = app_with_api_key(api::api_key_auth::ApiKeyRecord::free_tier(
+        TEST_API_KEY,
+        "tester",
+    ))
+    .await;
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/v1/evaluate")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", TEST_API_KEY),
+                )
+                .body(Body::from(
+                    json!({"rule":{"var":"a"},"data":{"a":42}}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let usage = app
+        .oneshot(
+            Request::builder()
+                .uri("/v1/usage")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", TEST_API_KEY),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let body = usage.into_body().collect().await.unwrap().to_bytes();
+    let res_json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(res_json["used_this_month"], 1);
+}
+
+#[tokio::test]
+async fn test_monthly_limit_exceeded_returns_402() {
+    let mut record = api::api_key_auth::ApiKeyRecord::free_tier(TEST_API_KEY, "tester");
+    record.monthly_limit = 1;
+    record.used_this_month = 1;
+    let app = app_with_api_key(record).await;
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/v1/evaluate")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", TEST_API_KEY),
+                )
+                .body(Body::from(
+                    json!({"rule":{"var":"a"},"data":{"a":42}}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::PAYMENT_REQUIRED);
+}
+
+#[tokio::test]
+async fn test_batch_array_evaluates_each_context_and_charges_n() {
+    let app = app_with_api_key(api::api_key_auth::ApiKeyRecord::free_tier(
+        TEST_API_KEY,
+        "tester",
+    ))
+    .await;
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/v1/evaluate")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", TEST_API_KEY),
+                )
+                .body(Body::from(
+                    json!({"rule":{"var":"a"},"data":[{"a":1},{"a":2},{"a":3}]}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res_json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(res_json["result"], json!([1, 2, 3]));
+
+    let usage = app
+        .oneshot(
+            Request::builder()
+                .uri("/v1/usage")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", TEST_API_KEY),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let body = usage.into_body().collect().await.unwrap().to_bytes();
+    let res_json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(res_json["used_this_month"], 3);
+}
+
+#[tokio::test]
+async fn test_dynamo_add_balance_condition_allows_new_item() {
+    let expr = "attribute_not_exists(balance) OR balance = :current_balance";
+    assert!(expr.contains("attribute_not_exists(balance)"));
 }

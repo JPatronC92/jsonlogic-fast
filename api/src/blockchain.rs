@@ -1,8 +1,7 @@
-use alloy::sol;
-use alloy::providers::{ProviderBuilder, RootProvider};
 use alloy::network::EthereumWallet;
+use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
-use alloy::transports::http::{Client, Http};
+use alloy::sol;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,11 +34,17 @@ impl BlockchainConfig {
         // Default to Base Sepolia for dev/test. For production (Fase 4) set RPC_URL=https://mainnet.base.org
         // CONTRACT_ADDRESS must be the deployed B2AStaking on Base Mainnet.
         // IMPORTANT: For production use from_env_with_secret_fallback() so PRIVATE_KEY is never required in Lambda env.
-        let rpc_url = env::var("RPC_URL").unwrap_or_else(|_| "https://sepolia.base.org".to_string());
-        let private_key = env::var("PRIVATE_KEY").unwrap_or_else(|_| "0000000000000000000000000000000000000000000000000000000000000001".to_string());
-        let contract_address_str = env::var("CONTRACT_ADDRESS").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
+        let rpc_url =
+            env::var("RPC_URL").unwrap_or_else(|_| "https://sepolia.base.org".to_string());
+        let private_key = env::var("PRIVATE_KEY").unwrap_or_else(|_| {
+            "0000000000000000000000000000000000000000000000000000000000000001".to_string()
+        });
+        let contract_address_str = env::var("CONTRACT_ADDRESS")
+            .unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
 
-        let contract_address = contract_address_str.parse().expect("Invalid contract address");
+        let contract_address = contract_address_str
+            .parse()
+            .expect("Invalid contract address");
 
         Self {
             rpc_url,
@@ -51,9 +56,13 @@ impl BlockchainConfig {
     /// Preferred for slasher Lambda: falls back to runtime fetch from Secrets Manager.
     /// Secret name: b2a/slasher-private-key-<ENVIRONMENT or dev>
     pub async fn from_env_with_secret_fallback() -> Self {
-        let rpc_url = env::var("RPC_URL").unwrap_or_else(|_| "https://sepolia.base.org".to_string());
-        let contract_address_str = env::var("CONTRACT_ADDRESS").unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
-        let contract_address = contract_address_str.parse().expect("Invalid contract address");
+        let rpc_url =
+            env::var("RPC_URL").unwrap_or_else(|_| "https://sepolia.base.org".to_string());
+        let contract_address_str = env::var("CONTRACT_ADDRESS")
+            .unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
+        let contract_address = contract_address_str
+            .parse()
+            .expect("Invalid contract address");
 
         let private_key = resolve_private_key().await;
 
@@ -74,7 +83,7 @@ impl BlockchainConfig {
         Arc::new(
             ProviderBuilder::new()
                 .wallet(wallet)
-                .connect_http(self.rpc_url.parse().unwrap())
+                .connect_http(self.rpc_url.parse().unwrap()),
         )
     }
 }
@@ -84,7 +93,9 @@ impl BlockchainConfig {
 async fn resolve_private_key() -> String {
     if let Ok(k) = env::var("PRIVATE_KEY") {
         let trimmed = k.trim();
-        if !trimmed.is_empty() && trimmed != "0000000000000000000000000000000000000000000000000000000000000001" {
+        if !trimmed.is_empty()
+            && trimmed != "0000000000000000000000000000000000000000000000000000000000000001"
+        {
             return trimmed.to_string();
         }
     }
@@ -97,10 +108,12 @@ async fn resolve_private_key() -> String {
     let secret_id = env::var("SLASHER_KEY_SECRET")
         .unwrap_or_else(|_| format!("b2a/slasher-private-key-{}", env_name));
 
-    match sm_client.get_secret_value()
+    match sm_client
+        .get_secret_value()
         .secret_id(secret_id.clone())
         .send()
-        .await {
+        .await
+    {
         Ok(out) => {
             if let Some(s) = out.secret_string {
                 return s;
@@ -109,7 +122,10 @@ async fn resolve_private_key() -> String {
             eprintln!("Secret {} had no secret_string", secret_id);
         }
         Err(e) => {
-            eprintln!("Failed loading secret {} from SecretsManager (using dummy): {:?}", secret_id, e);
+            eprintln!(
+                "Failed loading secret {} from SecretsManager (using dummy): {:?}",
+                secret_id, e
+            );
         }
     }
 
@@ -174,7 +190,8 @@ mod tests {
             },
             5,
             1, // fast
-        ).await;
+        )
+        .await;
 
         assert_eq!(result, Ok(42));
         assert_eq!(attempts.load(Ordering::SeqCst), 3);
@@ -182,11 +199,8 @@ mod tests {
 
     #[tokio::test]
     async fn retry_fails_after_max_attempts() {
-        let result: Result<(), &str> = retry_with_backoff(
-            || async { Err("always fail") },
-            2,
-            1,
-        ).await;
+        let result: Result<(), &str> =
+            retry_with_backoff(|| async { Err("always fail") }, 2, 1).await;
         assert_eq!(result, Err("always fail"));
     }
 }
