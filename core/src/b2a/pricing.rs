@@ -2,7 +2,7 @@ use alloy_primitives::U256;
 use serde_json::Value;
 
 /// Base cost: 0.0001 with 18 decimals (same unit as on-chain wei deposits)
-const BASE_COST: u128 = 100_000_000_000_000;           // 0.0001 * 10^18
+const BASE_COST: u128 = 100_000_000_000_000; // 0.0001 * 10^18
 const DEPTH_BONUS_PER_LEVEL: u128 = 10_000_000_000_000; // 0.00001 * 10^18 (10% of base)
 
 /// Returns the cost of an evaluation as U256 (18 decimal places precision).

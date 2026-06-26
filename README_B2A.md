@@ -1,133 +1,143 @@
-# API Serverless jsonlogic-fast B2A
+# API B2A jsonlogic-fast
 
-Este directorio contiene la implementación de la API B2A (Business-to-Agent) de `jsonlogic-fast`.
+La API B2A expone `jsonlogic-fast` como un MVP público controlado: el core sigue siendo open source y gratis, mientras que la API hosted usa API keys con Free Tier limitado. SIWE se mantiene disponible como modo avanzado/experimental para flujos con wallet y balance on-chain/off-chain.
 
-## Descripción del proyecto
+## Free Tier hosted
 
-`jsonlogic-fast` B2A es un motor ultrarrápido para evaluar reglas dinámicas en formato JSON, diseñado específicamente para agentes autónomos e inteligencias artificiales. Permite a los agentes delegar la evaluación lógica compleja, la toma de decisiones y el procesamiento por lotes de reglas de negocio en un entorno sin servidor y de alto rendimiento. Es ideal para que los agentes validen transacciones, analicen permisos o apliquen reglas condicionales sin sobrecargar su propio entorno de ejecución.
-
-## Arquitectura
-
-La solución B2A se compone de los siguientes elementos:
-- **API Server**: Un servidor HTTP asíncrono en Rust (basado en Axum o desplegable como AWS Lambda) que expone los endpoints de estimación de costos y evaluación de reglas.
-- **Autenticación SIWE**: Las solicitudes se autentican mediante el estándar *Sign-In with Ethereum* (EIP-4361). Los agentes firman las peticiones usando sus billeteras criptográficas.
-- **Pricing Engine**: Un módulo de precios dinámico que calcula el costo de una evaluación en función de su profundidad lógica (rule_depth) y la cantidad de datos (batch_size).
-- **Smart Contract (Mock)**: Un contrato inteligente simulado (`b2a_smart_contract.sol`) para el staking y la facturación, donde se cobra por cada evaluación descontando saldo de la billetera del agente.
+- Flujo principal: `Authorization: Bearer <api_key>`.
+- Límite mensual Free Tier: **1000 evaluaciones/mes** por API key.
+- Rate limit Free Tier: **10 requests/minuto** por API key.
+- Las API keys no se guardan en texto plano; el servicio almacena y compara hashes SHA-256.
+- Cuando se supera el límite mensual, `/v1/evaluate` responde `402 Payment Required`.
 
 ## Endpoints
 
+### `GET /health`
+
+Respuesta simple de health check:
+
+```json
+{"status":"ok","service":"jsonlogic-fast-b2a"}
+```
+
 ### `POST /v1/estimate`
-Calcula el costo estimado de ejecutar una evaluación sin consumirla.
-- **Payload esperado (JSON)**:
-  - `rule_depth` (entero): La profundidad máxima estimada de la regla (ej. 1).
-  - `batch_size` (entero): El número de contextos/elementos de datos a evaluar (ej. 100).
-- **Respuesta (JSON)**:
-  - `estimated_cost` (flotante): El costo estimado de la operación.
+
+Calcula el costo estimado sin ejecutar la regla.
+
+```json
+{
+  "rule_depth": 1,
+  "batch_size": 10
+}
+```
+
+Respuesta:
+
+```json
+{
+  "estimated_cost": "1100000000000000"
+}
+```
+
+`estimated_cost` se devuelve como **string decimal entero con 18 decimales implícitos**, no como float, para evitar pérdida de precisión.
+
+### `GET /v1/usage`
+
+Requiere API key mediante `Authorization: Bearer <api_key>` y devuelve uso mensual actual.
+
+```bash
+curl http://localhost:3000/v1/usage \
+  -H "Authorization: Bearer $B2A_API_KEY"
+```
+
+Respuesta:
+
+```json
+{
+  "owner": "agent@example.com",
+  "plan": "free",
+  "monthly_limit": 1000,
+  "used_this_month": 12,
+  "remaining_this_month": 988,
+  "rate_limit_per_minute": 10
+}
+```
 
 ### `POST /v1/evaluate`
-Ejecuta la evaluación de una regla contra unos datos y descuenta el costo del saldo del remitente. Requiere autenticación válida.
-- **Payload esperado (JSON)**:
-  - `message` (string): El mensaje SIWE completo que fue firmado.
-  - `signature` (string): La firma criptográfica generada por la wallet del agente.
-  - `rule` (JSON object): La regla en formato JsonLogic a evaluar.
-  - `data` (JSON object/array): El contexto o los datos sobre los que se evaluará la regla. Si es un arreglo, determina el `batch_size`.
-- **Respuesta (JSON)**:
-  - `result` (JSON object/array): El resultado de la evaluación.
-  - `cost` (flotante): El costo exacto que se dedujo del saldo.
 
-## Modelo de precios
+Evalúa una regla JSONLogic. Soporta dos modos de autenticación:
 
-El costo se calcula dinámicamente utilizando una tarifa base por cada evaluación y un recargo según la profundidad de la regla:
-`costo = tarifa_base * (1.0 + (rule_depth * 0.1)) * batch_size`
-Donde la tarifa base típica actual es `0.0001` USDC (o unidades de saldo) por evaluación. Es decir, una regla con profundidad de 1 sobre un único dato costará `0.00011`.
+1. **API key (principal / Free Tier)**: enviar `Authorization: Bearer <api_key>`. No requiere `message` ni `signature`; consume uso mensual.
+2. **SIWE (avanzado / experimental)**: enviar `message` y `signature`; mantiene nonce, rate limit por wallet, balance y descuento de saldo.
 
-## Autenticación
+Ejemplo principal con API key:
 
-Todas las solicitudes a `/v1/evaluate` deben firmarse utilizando el estándar EIP-4361 (Sign-In with Ethereum). El cliente genera un mensaje SIWE estándar, lo firma con su clave privada y envía el mensaje original y la firma al endpoint.
-
-### Ejemplo de firma con `ethers.js`
-
-```javascript
-import { ethers } from 'ethers';
-import { SiweMessage } from 'siwe';
-
-async function signRequest() {
-    const wallet = new ethers.Wallet('0x...tu_clave_privada...');
-    const address = await wallet.getAddress();
-
-    const domain = 'api.jsonlogic-fast.local';
-    const origin = 'https://api.jsonlogic-fast.local';
-
-    const message = new SiweMessage({
-        domain,
-        address,
-        statement: 'Sign in to jsonlogic-fast B2A API',
-        uri: origin,
-        version: '1',
-        chainId: 1
-    });
-
-    const messageToSign = message.prepareMessage();
-    const signature = await wallet.signMessage(messageToSign);
-
-    return { message: messageToSign, signature };
-}
-```
-
-## Ejemplos prácticos
-
-### 1. Estimación mediante cURL
 ```bash
-curl -X POST http://localhost:3000/v1/estimate \
-     -H "Content-Type: application/json" \
-     -d '{"rule_depth": 1, "batch_size": 10}'
+curl -X POST http://localhost:3000/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $B2A_API_KEY" \
+  -d '{
+    "rule": {"+": [{"var":"a"}, {"var":"b"}]},
+    "data": {"a": 10, "b": 20}
+  }'
 ```
 
-### 2. Evaluación mediante JavaScript (Node.js/Axios)
-```javascript
-const axios = require('axios');
-// Asume que obtienes `message` y `signature` del ejemplo de ethers.js
+Respuesta:
 
-const payload = {
-    message: messageToSign,
-    signature: signature,
-    rule: { "==": [1, 1] },
-    data: {}
-};
-
-axios.post('http://localhost:3000/v1/evaluate', payload)
-    .then(response => console.log(response.data))
-    .catch(error => console.error(error.response.data));
-```
-
-### 3. Evaluación mediante Python (Requests)
-```python
-import requests
-
-# Genera el mensaje SIWE y la firma usando una librería equivalente en Python como 'eth-account' y 'siwe'
-payload = {
-    "message": "...",      # Mensaje SIWE generado
-    "signature": "0x...",  # Firma del agente
-    "rule": { "and": [{ ">": [{"var": "temp"}, 100]}, { "==": [{"var": "status"}, "active"] }] },
-    "data": { "temp": 150, "status": "active" }
+```json
+{
+  "result": 30,
+  "cost": "120000000000000"
 }
-
-response = requests.post("http://localhost:3000/v1/evaluate", json=payload)
-print(response.json())
 ```
+
+`cost` se devuelve como **string decimal entero con 18 decimales implícitos**, no como float.
+
+#### Batch real
+
+Si `data` es un array, cada elemento se evalúa como contexto individual y el uso/costo se calcula con el número real de elementos:
+
+```bash
+curl -X POST http://localhost:3000/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $B2A_API_KEY" \
+  -d '{
+    "rule": {"var":"score"},
+    "data": [{"score": 90}, {"score": 45}, {"score": 100}]
+  }'
+```
+
+Respuesta esperada:
+
+```json
+{
+  "result": [90, 45, 100],
+  "cost": "330000000000000"
+}
+```
+
+## SIWE avanzado/experimental
+
+SIWE sigue disponible para agentes que necesitan firmar con wallet. El cliente genera un mensaje EIP-4361, lo firma y envía `message`, `signature`, `rule` y `data` a `/v1/evaluate`. El servidor valida dominio/URI/cadena configurables, registra nonces para prevenir replay, aplica rate limit y descuenta balance.
+
+Variables relevantes:
+
+- `SIWE_DOMAIN`
+- `SIWE_URI`
+- `SIWE_CHAIN_ID`
+- `SIWE_MAX_AGE_SECS`
+- `ENVIRONMENT`
+
+En `ENVIRONMENT=prod`, `MemoryStorage` se rechaza: producción debe usar almacenamiento persistente.
 
 ## Despliegue
 
-### Entorno local
-Para ejecutar el servidor localmente con Axum, usa el siguiente comando en la raíz del repositorio o dentro de la carpeta `api`:
+El workflow de deploy es manual (`workflow_dispatch`) y ejecuta build/tests/`terraform plan`. No hace `terraform apply` automático en push a ramas feature. El apply debe ejecutarse manualmente tras revisar el plan.
+
+## Desarrollo local
+
 ```bash
 cargo run -p api --bin api_server
 ```
-El servidor escuchará en `0.0.0.0:3000`.
 
-### Despliegue en AWS Lambda
-Para compilar y desplegar el servicio como una función serverless en AWS Lambda, se utiliza `cargo lambda`:
-```bash
-cargo lambda build --release --arm64
-cargo lambda deploy
-```
+Por defecto el servidor local puede usar `MemoryStorage` solo fuera de `ENVIRONMENT=prod`.
