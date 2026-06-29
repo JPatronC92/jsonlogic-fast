@@ -16,6 +16,7 @@ categories = ["wasm", "api-bindings", "development-tools"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+getrandom = { version = "0.2", features = ["js"] }
 jsonlogic-fast = { version = "0.1.1", path = "../core" }
 serde = "1.0.228"
 serde_json.workspace = true
