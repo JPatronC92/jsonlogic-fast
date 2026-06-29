@@ -145,8 +145,8 @@ pub(crate) fn balance_from_item(item: Option<&HashMap<String, AttributeValue>>) 
         }
         // legacy N
         if let Some(AttributeValue::N(bal_str)) = it.get("balance") {
-            if let Ok(f) = bal_str.parse::<f64>() {
-                return U256::from((f * 1e18) as u128);
+            if let Ok(bal) = bal_str.parse::<U256>() {
+                return bal;
             }
         }
     }

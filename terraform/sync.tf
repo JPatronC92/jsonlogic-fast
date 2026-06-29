@@ -47,8 +47,7 @@ resource "aws_iam_role_policy" "b2a_sync_dynamodb_policy" {
           "dynamodb:UpdateItem"
         ]
         Resource = [
-          aws_dynamodb_table.b2a_balances.arn,
-          aws_dynamodb_table.b2a_nonces.arn
+          aws_dynamodb_table.b2a_balances.arn
         ]
       },
       {
@@ -58,14 +57,7 @@ resource "aws_iam_role_policy" "b2a_sync_dynamodb_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = "arn:aws:secretsmanager:*:*:secret:b2a/*"
+        Resource = "arn:aws:logs:*:*:log-group:/aws/lambda/b2a_sync_${var.environment}:*"
       }
     ]
   })

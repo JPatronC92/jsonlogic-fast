@@ -53,7 +53,7 @@ resource "aws_iam_role_policy" "b2a_slasher_dynamodb_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:*:*:log-group:/aws/lambda/b2a_slasher_${var.environment}:*"
       },
       {
         Effect = "Allow"
