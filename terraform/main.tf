@@ -92,7 +92,7 @@ resource "aws_iam_role_policy" "b2a_api_dynamodb_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:*:*:log-group:/aws/lambda/b2a_api_${var.environment}:*"
       }
     ]
   })

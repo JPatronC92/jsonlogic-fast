@@ -392,10 +392,7 @@ impl DynamoStorage {
                             let bal = if let Ok(bal_str) = bal_val.as_s() {
                                 U256::from_str(bal_str).unwrap_or(U256::ZERO)
                             } else if let Ok(bal_str) = bal_val.as_n() {
-                                bal_str
-                                    .parse::<f64>()
-                                    .map(|f| U256::from((f * 1e18) as u128))
-                                    .unwrap_or(U256::ZERO)
+                                U256::from_str(bal_str).unwrap_or(U256::ZERO)
                             } else {
                                 U256::ZERO
                             };
