@@ -48,6 +48,12 @@ fn evaluate_numeric_boolean_coercion() {
 }
 
 #[wasm_bindgen_test]
+fn evaluate_numeric_invalid_rule_returns_error() {
+    let result = evaluate_numeric_wasm("not json", r#"{"x":1}"#);
+    assert!(result.is_err());
+}
+
+#[wasm_bindgen_test]
 fn evaluate_batch_multiple_contexts() {
     let rule = r#"{"if":[{">":[{"var":"score"},700]},"approve","review"]}"#;
     let contexts = r#"[{"score":800},{"score":500},{"score":742}]"#;

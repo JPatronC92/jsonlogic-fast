@@ -81,6 +81,10 @@ class TestEvaluateJson:
         with pytest.raises(ValueError):
             jsonlogic_fast.evaluate_json(INVALID_JSON, _ctx(x=1))
 
+    def test_invalid_context_json_raises(self):
+        with pytest.raises(ValueError):
+            jsonlogic_fast.evaluate_json(SIMPLE_RULE, INVALID_JSON)
+
 
 # ---------------------------------------------------------------------------
 # evaluate_numeric
@@ -202,6 +206,12 @@ class TestEvaluateBatchNumericDetailed:
         )
         assert values[0] == 0.0
         assert len(errors[0]) > 0
+
+    def test_invalid_rule_json_raises(self):
+        with pytest.raises(ValueError):
+            jsonlogic_fast.evaluate_batch_numeric_detailed(
+                INVALID_JSON, [_ctx(amount=100)]
+            )
 
 
 # ---------------------------------------------------------------------------
