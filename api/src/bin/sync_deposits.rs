@@ -44,6 +44,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let balances_table = env::var("BALANCES_TABLE").unwrap_or_else(|_| "B2A_Balances".to_string());
     let nonces_table = env::var("NONCES_TABLE").unwrap_or_else(|_| "B2A_Nonces".to_string());
     let use_dynamo = env::var("USE_DYNAMODB").unwrap_or_else(|_| "false".to_string()) == "true";
+    let environment = env::var("ENVIRONMENT").unwrap_or_else(|_| "dev".to_string());
+
+    if environment == "prod" && !use_dynamo {
+        panic!("MemoryStorage is not allowed when ENVIRONMENT=prod");
+    }
 
     let storage: Arc<StorageBackend> = if use_dynamo {
         log_info("storage_init", Some(json!({ "backend": "dynamodb" })));

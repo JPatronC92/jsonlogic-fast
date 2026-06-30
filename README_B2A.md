@@ -2,13 +2,33 @@
 
 La API B2A expone `jsonlogic-fast` como un MVP público controlado: el core sigue siendo open source y gratis, mientras que la API hosted usa API keys con Free Tier limitado. SIWE se mantiene disponible como modo avanzado/experimental para flujos con wallet y balance on-chain/off-chain.
 
+## Private Beta Positioning
+
+La API B2A se encuentra actualmente en **Private Beta**. Aunque es funcional y tiene salvaguardas de producción, el modelo de negocio, cuotas de tiers, latencias y configuraciones de CORS pueden cambiar en el futuro.
+
 ## Free Tier hosted
 
 - Flujo principal: `Authorization: Bearer <api_key>`.
 - Límite mensual Free Tier: **1000 evaluaciones/mes** por API key.
 - Rate limit Free Tier: **10 requests/minuto** por API key.
-- Las API keys no se guardan en texto plano; el servicio almacena y compara hashes SHA-256.
+- Las API keys no se guardan en texto plano; el servicio almacena y compara hashes SHA-256 en atributos planos de DynamoDB.
 - Cuando se supera el límite mensual, `/v1/evaluate` responde `402 Payment Required`.
+
+### Generación de API Keys
+
+Actualmente, no existe un endpoint público sin autenticación para generar API keys. Esto se hace de manera administrativa a través de la CLI integrada en el repositorio.
+
+Ejemplo:
+```bash
+cargo run -p api --bin api_key_admin -- create --environment dev --owner julio@example.com --plan free
+```
+Esto generará una clave aleatoria (e.g. `b2a_beta_<base64_hash>`), y la mostrará por única vez.
+El hash se guardará atómicamente en DynamoDB para seguimiento mensual.
+
+Las API keys se pueden revocar (desactivar):
+```bash
+cargo run -p api --bin api_key_admin -- revoke --environment dev --hash <api_key_hash>
+```
 
 ## Endpoints
 
@@ -91,53 +111,27 @@ Respuesta:
 }
 ```
 
-`cost` se devuelve como **string decimal entero con 18 decimales implícitos**, no como float.
-
-#### Batch real
-
-Si `data` es un array, cada elemento se evalúa como contexto individual y el uso/costo se calcula con el número real de elementos:
-
-```bash
-curl -X POST http://localhost:3000/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $B2A_API_KEY" \
-  -d '{
-    "rule": {"var":"score"},
-    "data": [{"score": 90}, {"score": 45}, {"score": 100}]
-  }'
-```
-
-Respuesta esperada:
-
+#### Errores estandarizados
+Los endpoints ahora manejan un "envelope" estructurado para errores de uso en `Evaluate` y `Usage`:
 ```json
 {
-  "result": [90, 45, 100],
-  "cost": "330000000000000"
+  "error": {
+    "code": "monthly_limit_exceeded",
+    "message": "Monthly free tier limit exceeded",
+    "request_id": "req-123"
+  }
 }
 ```
 
-## SIWE avanzado/experimental
+Principales códigos de estado de error:
+- `401 Unauthorized`: API key faltante o invalida (`missing_bearer_token`, `invalid_api_key`) o SIWE signature erronea.
+- `402 Payment Required`: La API Key llegó a su límite mensual del tier. (`monthly_limit_exceeded`)
+- `429 Too Many Requests`: Ha excedido el límite de evaluaciones/rate limits. (`rate_limit_exceeded`)
+- `400 Bad Request`: Falla parseo de JSONLogic u otro problema en la peticion de evaluacion. (`invalid_rule`)
+- `500 Internal Server Error`: Falla temporal del DB, mal parseo de evaluacion.
 
-SIWE sigue disponible para agentes que necesitan firmar con wallet. El cliente genera un mensaje EIP-4361, lo firma y envía `message`, `signature`, `rule` y `data` a `/v1/evaluate`. El servidor valida dominio/URI/cadena configurables, registra nonces para prevenir replay, aplica rate limit y descuenta balance.
+## Production Guardrails
+En entorno de producción (`ENVIRONMENT=prod`):
+- Los lambdas `slasher` y `sync_deposits` van a fallar y apagarse de inmediato si se usan con `USE_DYNAMODB=false` (Memoria temporal).
+- `blockchain` requerirá que se encuentre una llave privada de SecretsManager verdadera; de lo contrario tirará un panic, denegando fallbacks a llaves dummy locales.
 
-Variables relevantes:
-
-- `SIWE_DOMAIN`
-- `SIWE_URI`
-- `SIWE_CHAIN_ID`
-- `SIWE_MAX_AGE_SECS`
-- `ENVIRONMENT`
-
-En `ENVIRONMENT=prod`, `MemoryStorage` se rechaza: producción debe usar almacenamiento persistente.
-
-## Despliegue
-
-El workflow de deploy es manual (`workflow_dispatch`) y ejecuta build/tests/`terraform plan`. No hace `terraform apply` automático en push a ramas feature. El apply debe ejecutarse manualmente tras revisar el plan.
-
-## Desarrollo local
-
-```bash
-cargo run -p api --bin api_server
-```
-
-Por defecto el servidor local puede usar `MemoryStorage` solo fuera de `ENVIRONMENT=prod`.
