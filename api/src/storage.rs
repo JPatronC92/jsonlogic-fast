@@ -514,11 +514,23 @@ impl DynamoStorage {
                 AttributeValue::S(format!("__api_key:{}", record.api_key_hash)),
             )
             .item(
-                "api_key",
-                AttributeValue::S(
-                    serde_json::to_string(&record)
-                        .map_err(|e| B2AStorageError::Other(e.to_string()))?,
-                ),
+                "api_key_hash",
+                AttributeValue::S(record.api_key_hash.clone()),
+            )
+            .item("owner", AttributeValue::S(record.owner.clone()))
+            .item("plan", AttributeValue::S(record.plan.clone()))
+            .item("active", AttributeValue::Bool(record.active))
+            .item(
+                "monthly_limit",
+                AttributeValue::N(record.monthly_limit.to_string()),
+            )
+            .item(
+                "used_this_month",
+                AttributeValue::N(record.used_this_month.to_string()),
+            )
+            .item(
+                "rate_limit_per_minute",
+                AttributeValue::N(record.rate_limit_per_minute.to_string()),
             )
             .send()
             .await
@@ -555,47 +567,42 @@ impl DynamoStorage {
         api_key_hash: &str,
         amount: u64,
     ) -> Result<(), B2AStorageError> {
-        loop {
-            let mut record = self
-                .get_api_key(api_key_hash)
-                .await?
-                .ok_or_else(|| B2AStorageError::Other("API key not found".to_string()))?;
-            let next = record.used_this_month.saturating_add(amount);
-            if next > record.monthly_limit {
-                return Err(B2AStorageError::InsufficientFunds);
-            }
-            record.used_this_month = next;
-            let result = self
-                .client
-                .put_item()
-                .table_name(&self.balances_table)
-                .item(
-                    "address",
-                    AttributeValue::S(format!("__api_key:{}", api_key_hash)),
-                )
-                .item(
-                    "api_key",
-                    AttributeValue::S(
-                        serde_json::to_string(&record)
-                            .map_err(|e| B2AStorageError::Other(e.to_string()))?,
-                    ),
-                )
-                .condition_expression("attribute_exists(address)")
-                .send()
-                .await;
-            match result {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    let err_str = format!("{:?}", e);
-                    if err_str.contains("ConditionalCheckFailedException") {
-                        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-                        continue;
+        let pk = format!("__api_key:{}", api_key_hash);
+        let result = self
+            .client
+            .update_item()
+            .table_name(&self.balances_table)
+            .key("address", AttributeValue::S(pk.clone()))
+            .update_expression("SET used_this_month = used_this_month + :amount")
+            .condition_expression(
+                "attribute_exists(address) AND active = :true AND used_this_month + :amount <= monthly_limit",
+            )
+            .expression_attribute_values(":amount", AttributeValue::N(amount.to_string()))
+            .expression_attribute_values(":true", AttributeValue::Bool(true))
+            .send()
+            .await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let err_str = format!("{:?}", e);
+                if err_str.contains("ConditionalCheckFailedException") {
+                    // Could be invalid key, inactive key, or limit exceeded.
+                    // For the sake of standard B2A semantics (which distinguishes these internally/externally in evaluation)
+                    // we do a fast check to see which one it is.
+                    let record = self.get_api_key(api_key_hash).await?;
+                    if let Some(r) = record {
+                        if !r.active {
+                            return Err(B2AStorageError::Other("API key inactive".to_string()));
+                        }
+                        return Err(B2AStorageError::InsufficientFunds);
                     }
-                    return Err(B2AStorageError::Other(format!(
-                        "DynamoDB api usage error: {}",
-                        err_str
-                    )));
+                    return Err(B2AStorageError::Other("API key not found".to_string()));
                 }
+                Err(B2AStorageError::Other(format!(
+                    "DynamoDB api usage error: {}",
+                    err_str
+                )))
             }
         }
     }

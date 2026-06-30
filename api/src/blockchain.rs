@@ -123,10 +123,14 @@ async fn resolve_private_key() -> String {
         }
         Err(e) => {
             eprintln!(
-                "Failed loading secret {} from SecretsManager (using dummy): {:?}",
+                "Failed loading secret {} from SecretsManager: {:?}",
                 secret_id, e
             );
         }
+    }
+
+    if env_name == "prod" {
+        panic!("Failed to load real private key in production environment.");
     }
 
     // last resort dummy (will fail on chain unless test)
