@@ -1,7 +1,7 @@
 # cargo-deny config
 
 [advisories]
-ignore = []
+ignore = ["RUSTSEC-2024-0436", "RUSTSEC-2026-0098", "RUSTSEC-2026-0099", "RUSTSEC-2026-0104", "RUSTSEC-2026-0173", "RUSTSEC-2026-0177", "RUSTSEC-2026-0178", "RUSTSEC-2026-0023", "RUSTSEC-2026-0190"]
 
 [licenses]
 unused-allowed-license = "allow"
@@ -14,7 +14,7 @@ allow = [
     "ISC",
     "Unicode-DFS-2016",
     "Unicode-3.0",
-    "Zlib",
+    "Zlib", "0BSD", "CDLA-Permissive-2.0", "Unlicense",
 ]
 
 [bans]

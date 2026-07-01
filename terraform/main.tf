@@ -9,9 +9,9 @@ provider "aws" {
 
 # DynamoDB Tables
 resource "aws_dynamodb_table" "b2a_balances" {
-  name           = "${var.balances_table_name}_${var.environment}"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "address"
+  name         = "${var.balances_table_name}_${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "address"
 
   attribute {
     name = "address"
@@ -25,9 +25,9 @@ resource "aws_dynamodb_table" "b2a_balances" {
 }
 
 resource "aws_dynamodb_table" "b2a_nonces" {
-  name           = "${var.nonces_table_name}_${var.environment}"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "id"
+  name         = "${var.nonces_table_name}_${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
 
   attribute {
     name = "id"
@@ -100,7 +100,7 @@ resource "aws_iam_role_policy" "b2a_api_dynamodb_policy" {
 
 # Package the Lambda payload
 data "archive_file" "lambda_zip" {
-  type        = "zip"
+  type = "zip"
   # This expects cargo-lambda output in the root of the project
   source_file = "../api/target/lambda/lambda/bootstrap"
   output_path = "lambda_payload.zip"
@@ -108,23 +108,23 @@ data "archive_file" "lambda_zip" {
 
 # Lambda Function (API)
 resource "aws_lambda_function" "b2a_api" {
-  function_name    = "b2a_api_${var.environment}"
-  role             = aws_iam_role.b2a_api_lambda_role.arn
-  handler          = "bootstrap" # Rust custom runtime requires this handler name
-  runtime          = "provided.al2023" # Amazon Linux 2023 for Rust
-  architectures    = ["arm64"] # Or x86_64 depending on build
-  timeout          = 30
+  function_name = "b2a_api_${var.environment}"
+  role          = aws_iam_role.b2a_api_lambda_role.arn
+  handler       = "bootstrap"       # Rust custom runtime requires this handler name
+  runtime       = "provided.al2023" # Amazon Linux 2023 for Rust
+  architectures = ["arm64"]         # Or x86_64 depending on build
+  timeout       = 30
 
   filename         = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   environment {
     variables = {
-      USE_DYNAMODB    = "true"
-      BALANCES_TABLE  = aws_dynamodb_table.b2a_balances.name
-      NONCES_TABLE    = aws_dynamodb_table.b2a_nonces.name
-      RPC_URL         = var.rpc_url
-      CONTRACT_ADDRESS   = var.contract_address
+      USE_DYNAMODB      = "true"
+      BALANCES_TABLE    = aws_dynamodb_table.b2a_balances.name
+      NONCES_TABLE      = aws_dynamodb_table.b2a_nonces.name
+      RPC_URL           = var.rpc_url
+      CONTRACT_ADDRESS  = var.contract_address
       SIWE_DOMAIN       = var.siwe_domain
       SIWE_URI          = var.siwe_uri
       SIWE_CHAIN_ID     = var.siwe_chain_id

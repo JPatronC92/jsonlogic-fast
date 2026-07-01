@@ -65,23 +65,23 @@ resource "aws_iam_role_policy" "b2a_sync_dynamodb_policy" {
 
 # Lambda Function for Sync Deposits
 resource "aws_lambda_function" "b2a_sync" {
-  function_name    = "b2a_sync_${var.environment}"
-  role             = aws_iam_role.b2a_sync_lambda_role.arn
-  handler          = "bootstrap"
-  runtime          = "provided.al2023"
-  architectures    = ["arm64"]
-  timeout          = 300 # Allow time for block range processing
+  function_name = "b2a_sync_${var.environment}"
+  role          = aws_iam_role.b2a_sync_lambda_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
+  architectures = ["arm64"]
+  timeout       = 300 # Allow time for block range processing
 
   filename         = data.archive_file.sync_zip.output_path
   source_code_hash = data.archive_file.sync_zip.output_base64sha256
 
   environment {
     variables = {
-      USE_DYNAMODB    = "true"
-      BALANCES_TABLE  = aws_dynamodb_table.b2a_balances.name
-      NONCES_TABLE    = aws_dynamodb_table.b2a_nonces.name
-      RPC_URL         = var.rpc_url
-      CONTRACT_ADDRESS= var.contract_address
+      USE_DYNAMODB     = "true"
+      BALANCES_TABLE   = aws_dynamodb_table.b2a_balances.name
+      NONCES_TABLE     = aws_dynamodb_table.b2a_nonces.name
+      RPC_URL          = var.rpc_url
+      CONTRACT_ADDRESS = var.contract_address
     }
   }
 

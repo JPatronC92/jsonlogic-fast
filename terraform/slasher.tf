@@ -56,8 +56,8 @@ resource "aws_iam_role_policy" "b2a_slasher_dynamodb_policy" {
         Resource = "arn:aws:logs:*:*:log-group:/aws/lambda/b2a_slasher_${var.environment}:*"
       },
       {
-        Effect = "Allow"
-        Action = "secretsmanager:GetSecretValue"
+        Effect   = "Allow"
+        Action   = "secretsmanager:GetSecretValue"
         Resource = "arn:aws:secretsmanager:*:*:secret:b2a/slasher-private-key-${var.environment}*"
       }
     ]
@@ -66,23 +66,23 @@ resource "aws_iam_role_policy" "b2a_slasher_dynamodb_policy" {
 
 # Lambda Function (Slasher)
 resource "aws_lambda_function" "b2a_slasher" {
-  function_name    = "b2a_slasher_${var.environment}"
-  role             = aws_iam_role.b2a_slasher_lambda_role.arn
-  handler          = "bootstrap" 
-  runtime          = "provided.al2023"
-  architectures    = ["arm64"]
-  timeout          = 300 # Slasher needs more time (5 minutes) for blockchain interactions
+  function_name = "b2a_slasher_${var.environment}"
+  role          = aws_iam_role.b2a_slasher_lambda_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
+  architectures = ["arm64"]
+  timeout       = 300 # Slasher needs more time (5 minutes) for blockchain interactions
 
   filename         = data.archive_file.slasher_zip.output_path
   source_code_hash = data.archive_file.slasher_zip.output_base64sha256
 
   environment {
     variables = {
-      USE_DYNAMODB    = "true"
-      BALANCES_TABLE  = aws_dynamodb_table.b2a_balances.name
-      NONCES_TABLE    = aws_dynamodb_table.b2a_nonces.name
-      RPC_URL         = var.rpc_url
-      CONTRACT_ADDRESS= var.contract_address
+      USE_DYNAMODB     = "true"
+      BALANCES_TABLE   = aws_dynamodb_table.b2a_balances.name
+      NONCES_TABLE     = aws_dynamodb_table.b2a_nonces.name
+      RPC_URL          = var.rpc_url
+      CONTRACT_ADDRESS = var.contract_address
       # PRIVATE_KEY is NO LONGER injected; fetched at runtime from Secrets Manager by the binary
     }
   }

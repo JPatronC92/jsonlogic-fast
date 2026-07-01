@@ -23,6 +23,9 @@ futures-util = "0.3.32"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "2.0"
+tower-http = { version = "0.7.0", features = ["cors", "limit", "trace"] }
+tower = "0.5.3"
+rand = "0.8.6"
 
 [[bin]]
 name = "api_server"
