@@ -31,12 +31,15 @@
 //! assert_eq!(results, vec![serde_json::json!(90), serde_json::json!(45)]);
 //! ```
 
+pub mod compiler_dsl;
 pub mod error;
 pub mod extract;
 pub mod guardrails;
 pub mod orchestrator;
 pub mod policy;
 pub mod router;
+
+pub use compiler_dsl::compile_dsl;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};

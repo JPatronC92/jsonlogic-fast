@@ -518,6 +518,15 @@ fn jsonlogic_fast(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // jsonlogic-ai functions
     m.add_function(wrap_pyfunction!(evaluate_guardrails, m)?)?;
     m.add_function(wrap_pyfunction!(orchestrate_reflection, m)?)?;
+    m.add_function(wrap_pyfunction!(compile_dsl, m)?)?;
 
     Ok(())
+}
+
+#[pyfunction]
+fn compile_dsl(py: Python<'_>, dsl_str: &str) -> PyResult<PyObject> {
+    let result = ::jsonlogic_fast::compile_dsl(dsl_str).map_py_err()?;
+    pythonize(py, &result)
+        .map(|v| v.unbind())
+        .map_err(|e| py_value_error(e.to_string()))
 }

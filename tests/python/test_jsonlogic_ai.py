@@ -207,3 +207,22 @@ def test_orchestrate_reflection_loop_detection():
     assert result.success is False
     assert len(result.attempts) == 1
     assert "Infinite loop" in result.error_message
+
+
+def test_compile_dsl():
+    from jsonlogic_fast import compile_dsl
+
+    dsl = """
+        rule approve_credit:
+          when score > 700
+          then "approve"
+          else "review"
+    """
+    compiled = compile_dsl(dsl)
+    assert compiled == {
+        "if": [
+            {">": [{"var": "score"}, 700.0]},
+            "approve",
+            "review"
+        ]
+    }

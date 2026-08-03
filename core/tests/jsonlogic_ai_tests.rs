@@ -248,3 +248,25 @@ fn test_orchestration_loop_detection() {
         .unwrap()
         .contains("Infinite loop detected"));
 }
+
+#[test]
+fn test_dsl_compiler_success() {
+    let dsl = r#"
+        rule approve_credit:
+          when score > 700
+          then "approve"
+          else "review"
+    "#;
+
+    let compiled = jsonlogic_fast::compiler_dsl::compile_dsl(dsl).unwrap();
+    assert_eq!(
+        compiled,
+        json!({
+            "if": [
+                {">": [{"var": "score"}, 700.0]},
+                "approve",
+                "review"
+            ]
+        })
+    );
+}
