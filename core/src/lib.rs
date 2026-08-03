@@ -33,6 +33,10 @@
 
 pub mod error;
 pub mod extract;
+pub mod guardrails;
+pub mod orchestrator;
+pub mod policy;
+pub mod router;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
