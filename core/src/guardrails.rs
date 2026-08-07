@@ -99,6 +99,6 @@ pub fn evaluate_guardrails(
         }
     }
 
-    let valid = violations.is_empty();
+    let valid = !violations.iter().any(|v| v.severity == Severity::Error);
     Ok(GuardrailReport { valid, violations })
 }

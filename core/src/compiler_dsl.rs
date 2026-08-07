@@ -1,5 +1,26 @@
 use serde_json::{json, Value};
 
+fn split_comma_outside_quotes(s: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut last_pos = 0;
+    let mut in_single_quote = false;
+    let mut in_double_quote = false;
+    let mut chars = s.char_indices().peekable();
+
+    while let Some((idx, ch)) = chars.next() {
+        if ch == '\'' && !in_double_quote {
+            in_single_quote = !in_single_quote;
+        } else if ch == '"' && !in_single_quote {
+            in_double_quote = !in_double_quote;
+        } else if ch == ',' && !in_single_quote && !in_double_quote {
+            parts.push(&s[last_pos..idx]);
+            last_pos = idx + 1;
+        }
+    }
+    parts.push(&s[last_pos..]);
+    parts
+}
+
 /// Parses an expression, which can be a string literal, boolean literal, numeric literal, or a variable reference.
 fn parse_expression(expr: &str) -> Result<Value, String> {
     let trimmed = expr.trim();
@@ -11,7 +32,12 @@ fn parse_expression(expr: &str) -> Result<Value, String> {
     if (trimmed.starts_with('"') && trimmed.ends_with('"'))
         || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
     {
-        return Ok(json!(trimmed[1..trimmed.len() - 1].to_string()));
+        if trimmed.len() >= 2 {
+            return Ok(json!(trimmed[1..trimmed.len() - 1].to_string()));
+        }
+    }
+    if trimmed == "\"" || trimmed == "'" || (trimmed.starts_with('"') && !trimmed.ends_with('"')) || (trimmed.starts_with('\'') && !trimmed.ends_with('\'')) || (!trimmed.starts_with('"') && trimmed.ends_with('"')) || (!trimmed.starts_with('\'') && trimmed.ends_with('\'')) {
+        return Err(format!("Unterminated string literal or unbalanced quotes: '{}'", trimmed));
     }
 
     // 2. Boolean literal
@@ -27,7 +53,21 @@ fn parse_expression(expr: &str) -> Result<Value, String> {
         return Ok(json!(val));
     }
 
-    // 4. Variable reference
+    // 4. Array literal
+    if trimmed.starts_with('[') && trimmed.ends_with(']') {
+        let inner = trimmed[1..trimmed.len() - 1].trim();
+        if inner.is_empty() {
+            return Ok(json!([]));
+        }
+        let parts = split_comma_outside_quotes(inner);
+        let mut items = Vec::new();
+        for p in parts {
+            items.push(parse_expression(p)?);
+        }
+        return Ok(json!(items));
+    }
+
+    // 5. Variable reference
     Ok(json!({ "var": trimmed }))
 }
 

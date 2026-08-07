@@ -190,6 +190,35 @@ def test_orchestrate_reflection_abort_non_retryable():
     assert result.error_message == "Non-retryable violation encountered."
 
 
+def test_orchestrate_reflection_abort_mixed_retryable():
+    rules = [
+        RuleEnvelope(
+            id="score_retryable",
+            assert_val={">": [{"var": "score"}, 500]},
+            message="Score too low, but retryable",
+            path="$.score",
+            retryable=True,
+        ),
+        RuleEnvelope(
+            id="score_critical",
+            assert_val={">": [{"var": "score"}, 100]},
+            message="Score below 100, critical!",
+            path="$.score",
+            retryable=False,
+        )
+    ]
+
+    def mock_generator(messages):
+        return '{"score": 50}'
+
+    result = orchestrate_reflection(rules, mock_generator, [], 3)
+    assert result.success is False
+    assert len(result.attempts) == 1
+    assert result.attempts[0].valid is False
+    assert "Non-retryable" in result.attempts[0].feedback
+    assert result.error_message == "Non-retryable violation encountered."
+
+
 def test_orchestrate_reflection_loop_detection():
     rules = [
         RuleEnvelope(
@@ -224,5 +253,24 @@ def test_compile_dsl():
             {">": [{"var": "score"}, 700.0]},
             "approve",
             "review"
+        ]
+    }
+
+
+def test_compile_dsl_with_array_literal():
+    from jsonlogic_fast import compile_dsl
+
+    dsl = """
+        rule category_check:
+          when category in ["premium", "gold"]
+          then "allowed"
+          else "denied"
+    """
+    compiled = compile_dsl(dsl)
+    assert compiled == {
+        "if": [
+            {"in": [{"var": "category"}, ["premium", "gold"]]},
+            "allowed",
+            "denied"
         ]
     }

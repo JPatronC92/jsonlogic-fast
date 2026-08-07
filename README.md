@@ -13,7 +13,7 @@
 * **Fraud / Risk Scoring Engine:** You need to evaluate high-throughput evaluations against dynamic JSON rules.
 * **Feature Flagging:** You have complex targeting rules that need to be evaluated synchronously without network latency.
 * **Multi-Platform Consistency:** You need the exact same rule to evaluate identically on your Rust backend, your Python data pipeline, and your user's browser (WASM).
-* **AI Guardrails:** You want deterministic, programmatic checks on LLM JSON outputs before accepting them.
+* **AI Guardrails:** You want deterministic, programmatic checks on LLM JSON outputs before accepting them. See [README_AI.md](README_AI.md) for our dedicated orchestration, reflection, and guardrails layer designed specifically for local and small language models (SLMs).
 
 ## Why not just use pure Python?
 

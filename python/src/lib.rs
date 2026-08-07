@@ -457,10 +457,16 @@ fn orchestrate_reflection(
 
     let generate_wrapper =
         |messages: &[Value]| -> Result<String, ::jsonlogic_fast::error::RuleEngineError> {
-            let py_messages: Vec<PyObject> = messages
-                .iter()
-                .map(|m| pythonize(py, m).unwrap().unbind())
-                .collect();
+            let mut py_messages = Vec::with_capacity(messages.len());
+            for m in messages {
+                let py_val = pythonize(py, m).map_err(|e| {
+                    ::jsonlogic_fast::error::RuleEngineError::Evaluation(format!(
+                        "Pythonize error: {}",
+                        e
+                    ))
+                })?;
+                py_messages.push(py_val.unbind());
+            }
 
             let res = generate_fn.call1(py, (py_messages,)).map_err(|e| {
                 ::jsonlogic_fast::error::RuleEngineError::Evaluation(format!(

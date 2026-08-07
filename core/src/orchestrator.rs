@@ -25,12 +25,16 @@ pub struct OrchestrationResult {
 pub fn render_violations(violations: &[Violation]) -> String {
     let mut msg = String::from("The generated output violated the following business rules:\n");
     for violation in violations {
+        let actual_formatted = match &violation.actual {
+            Some(val) => val.to_string(),
+            None => "None".to_string(),
+        };
         msg.push_str(&format!(
-            "- [{}] Path '{}': {} (Actual: {:?})\n",
+            "- [{}] Path '{}': {} (Actual: {})\n",
             violation.rule_id,
             violation.path.as_deref().unwrap_or("unknown"),
             violation.message,
-            violation.actual
+            actual_formatted
         ));
     }
     msg.push_str("Please correct these errors and output the revised valid JSON.");
@@ -130,9 +134,9 @@ where
             });
         }
 
-        // Check if any violation is retryable
-        let any_retryable = validation_report.violations.iter().any(|v| v.retryable);
-        if !any_retryable {
+        // Check if any violation is non-retryable
+        let any_non_retryable = validation_report.violations.iter().any(|v| !v.retryable);
+        if any_non_retryable {
             attempts.push(AttemptLog {
                 attempt,
                 raw_output,

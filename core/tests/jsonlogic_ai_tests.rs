@@ -80,6 +80,28 @@ fn test_evaluate_guardrails_pass_and_fail() {
 }
 
 #[test]
+fn test_evaluate_guardrails_warning_only_does_not_invalidate() {
+    let rules = vec![
+        RuleEnvelope {
+            id: "status_check".to_string(),
+            assert: json!({"==": [{"var": "status"}, "success"]}),
+            message: "Status must be success.".to_string(),
+            path: Some("$.status".to_string()),
+            severity: Severity::Warning,
+            retryable: false,
+        },
+    ];
+
+    let input_fail = json!({
+        "status": "failed"
+    });
+    let report = evaluate_guardrails(&rules, &input_fail).unwrap();
+    assert!(report.valid); // Warnings should not invalidate the report
+    assert_eq!(report.violations.len(), 1);
+    assert_eq!(report.violations[0].severity, Severity::Warning);
+}
+
+#[test]
 fn test_router_deterministic() {
     let rule = json!({
         "if": [
@@ -223,6 +245,43 @@ fn test_orchestration_loop_non_retryable_abort() {
 }
 
 #[test]
+fn test_orchestration_loop_mixed_retryable_abort() {
+    // A mix of retryable and non-retryable violations should abort immediately.
+    let rules = vec![
+        RuleEnvelope {
+            id: "score_retryable".to_string(),
+            assert: json!({">": [{"var": "score"}, 80]}),
+            message: "Score below 80, but retryable.".to_string(),
+            path: Some("$.score".to_string()),
+            severity: Severity::Error,
+            retryable: true,
+        },
+        RuleEnvelope {
+            id: "score_critical".to_string(),
+            assert: json!({">": [{"var": "score"}, 50]}),
+            message: "Score below 50, critical!".to_string(),
+            path: Some("$.score".to_string()),
+            severity: Severity::Error,
+            retryable: false,
+        },
+    ];
+
+    let mock_generator = |_messages: &[Value]| -> Result<String, RuleEngineError> {
+        Ok(r#"{"score": 30}"#.to_string())
+    };
+
+    let result = orchestrate_reflection(&rules, mock_generator, &[], 3).unwrap();
+    assert!(!result.success);
+    assert_eq!(result.attempts.len(), 1);
+    assert!(!result.attempts[0].valid);
+    assert!(result.attempts[0]
+        .feedback
+        .as_ref()
+        .unwrap()
+        .contains("Non-retryable violation"));
+}
+
+#[test]
 fn test_orchestration_loop_detection() {
     let rules = vec![RuleEnvelope {
         id: "score_ok".to_string(),
@@ -266,6 +325,58 @@ fn test_dsl_compiler_success() {
                 {">": [{"var": "score"}, 700.0]},
                 "approve",
                 "review"
+            ]
+        })
+    );
+}
+
+#[test]
+fn test_dsl_compiler_unbalanced_quotes_error() {
+    let dsl = r#"
+        rule bad_quotes:
+          when category == "premium
+          then "allowed"
+          else "denied"
+    "#;
+
+    let result = jsonlogic_fast::compiler_dsl::compile_dsl(dsl);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err();
+    assert!(err_msg.contains("Unterminated string literal") || err_msg.contains("unbalanced quotes"));
+}
+
+#[test]
+fn test_dsl_compiler_single_quote_error() {
+    let dsl = r#"
+        rule bad_quotes:
+          when category == "
+          then "allowed"
+          else "denied"
+    "#;
+
+    let result = jsonlogic_fast::compiler_dsl::compile_dsl(dsl);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err();
+    assert!(err_msg.contains("Unterminated string literal") || err_msg.contains("unbalanced quotes"));
+}
+
+#[test]
+fn test_dsl_compiler_in_array_literal() {
+    let dsl = r#"
+        rule category_check:
+          when category in ["premium", "gold"]
+          then "allowed"
+          else "denied"
+    "#;
+
+    let compiled = jsonlogic_fast::compiler_dsl::compile_dsl(dsl).unwrap();
+    assert_eq!(
+        compiled,
+        json!({
+            "if": [
+                {"in": [{"var": "category"}, ["premium", "gold"]]},
+                "allowed",
+                "denied"
             ]
         })
     );

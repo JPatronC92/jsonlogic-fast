@@ -29,9 +29,9 @@ Ofrece un bucle de reflexión automática determinista (`orchestrate_reflection`
 ### 2. Logic-Driven Context Injection & Routing
 Evita la inyección masiva de contexto en la ventana de tokens de tus SLMs (lo que ralentiza la inferencia y degrada la atención). Usa un enrutador determinista (`Router`) basado en JSON-Logic para tomar decisiones de enrutamiento ultrarrápidas (<1ms) sobre metadatos estructurados de usuario o entorno.
 
-### 3. Natural-to-Logic Compiler *(Futura versión 0.2/0.3)*
+### 3. Natural-to-Logic Compiler (Parser DSL en v0.1, Asistente LLM en v0.2/0.3)
 El "Secret Sauce": un compilador híbrido compuesto por:
-1. **Parser determinista de un DSL simple**: Traduce de pseudocódigo lógico a JSON-Logic 100% offline y seguro.
+1. **Parser determinista de un DSL simple (Ya disponible en v0.1)**: Traduce de pseudocódigo lógico a JSON-Logic 100% offline y seguro.
 2. **Asistente LLM opcional**: Convierte descripciones de reglas en lenguaje natural al DSL formal, asegurando que la salida de la IA siempre pase por validación determinista antes de ejecutarse.
 
 ---
@@ -44,6 +44,7 @@ El MVP actual (v0.1) incluye las implementaciones canónicas nativas en **Rust**
 * **`evaluate_guardrails`**: Ejecuta aserciones JSON-Logic sobre la salida estructurada de los modelos y devuelve un reporte detallado de violaciones.
 * **`Router`**: Evaluación y despacho determinista basado en contexto de usuario, entorno e intenciones.
 * **`orchestrate_reflection`**: Orquestación automática del bucle de reflexión para corregir respuestas erróneas del modelo mediante reintentos con feedback estructurado, detección de bucles infinitos y soporte para abortar por fallos críticos (no corregibles).
+* **`compile_dsl`**: Compila un DSL intuitivo basado en texto ("when ... then ... else ...") de vuelta a la representación nativa estructurada de JSON-Logic, de manera offline, segura y ultra rápida.
 
 ---
 
@@ -51,10 +52,10 @@ El MVP actual (v0.1) incluye las implementaciones canónicas nativas en **Rust**
 
 ### 🐍 Python (v0.1)
 
-Aquí tienes cómo usar los guardrails y el orquestador de reintentos con un callback de generación local (por ejemplo, llamando a Ollama, Llama.cpp, o cualquier otro proveedor):
+Aquí tienes cómo usar los guardrails, el orquestador de reintentos, el compilador DSL y el router con un callback de generación local:
 
 ```python
-from jsonlogic_fast import RuleEnvelope, evaluate_guardrails, orchestrate_reflection, Router
+from jsonlogic_fast import RuleEnvelope, evaluate_guardrails, orchestrate_reflection, Router, compile_dsl
 
 # 1. Definir nuestras políticas de negocio deterministas
 rules = [
@@ -123,6 +124,17 @@ decision = router.route({
     "environment": {"local_model_available": True}
 })
 print("Decisión del Router:", decision) # 'local_llm'
+
+# 4. Compilador DSL de Texto a JSON-Logic
+dsl_rule = """
+    rule approve_credit:
+      when score > 700
+      then "approve"
+      else "review"
+"""
+compiled_logic = compile_dsl(dsl_rule)
+print("JSON-Logic Compilado:", compiled_logic)
+# Salida: {'if': [{'>': [{'var': 'score'}, 700.0]}, 'approve', 'review']}
 ```
 
 ### 🦀 Rust (v0.1)
@@ -166,7 +178,6 @@ fn main() {
 
 ### 0.2 (Siguiente versión)
 * Soporte para WASM / TypeScript.
-* Parser determinista del DSL (offline y sin dependencias).
 * Trazas detalladas de ejecución.
 
 ### 0.3
