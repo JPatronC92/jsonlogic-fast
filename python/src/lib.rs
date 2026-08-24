@@ -19,6 +19,12 @@ fn core_serialize(value: &impl serde::Serialize) -> PyResult<String> {
 use pyo3::types::PyAny;
 use pythonize::pythonize;
 
+fn to_py_any<T: serde::Serialize>(py: Python<'_>, value: &T) -> PyResult<Py<PyAny>> {
+    pythonize(py, value)
+        .map(|value| value.unbind())
+        .map_py_err()
+}
+
 fn py_value_error(message: impl Into<String>) -> PyErr {
     PyValueError::new_err(message.into())
 }
@@ -36,9 +42,7 @@ impl<T, E: std::fmt::Display> PyResultExt<T> for Result<T, E> {
 #[pyfunction]
 fn evaluate(py: Python<'_>, rule_json: &str, context_json: &str) -> PyResult<Py<PyAny>> {
     let result = core_evaluate(rule_json, context_json).map_py_err()?;
-    pythonize(py, &result)
-        .map(|value| value.unbind())
-        .map_py_err()
+    to_py_any(py, &result)
 }
 
 #[pyfunction]
@@ -64,9 +68,7 @@ fn evaluate_batch(
     contexts_json: Vec<String>,
 ) -> PyResult<Py<PyAny>> {
     let result = core_evaluate_batch(rule_json, &contexts_json).map_py_err()?;
-    pythonize(py, &result)
-        .map(|value| value.unbind())
-        .map_py_err()
+    to_py_any(py, &result)
 }
 
 #[pyfunction]
@@ -82,9 +84,7 @@ fn evaluate_batch_detailed(
     contexts_json: Vec<String>,
 ) -> PyResult<Py<PyAny>> {
     let result = core_evaluate_batch_detailed(rule_json, &contexts_json).map_py_err()?;
-    pythonize(py, &result)
-        .map(|value| value.unbind())
-        .map_py_err()
+    to_py_any(py, &result)
 }
 
 #[pyfunction]
@@ -122,16 +122,12 @@ impl CompiledRule {
 
     fn evaluate(&self, py: Python<'_>, context_json: &str) -> PyResult<Py<PyAny>> {
         let result = self.core_rule.evaluate(context_json).map_py_err()?;
-        pythonize(py, &result)
-            .map(|value| value.unbind())
-            .map_py_err()
+        to_py_any(py, &result)
     }
 
     fn evaluate_batch(&self, py: Python<'_>, contexts_json: Vec<String>) -> PyResult<Py<PyAny>> {
         let result = self.core_rule.evaluate_batch(&contexts_json).map_py_err()?;
-        pythonize(py, &result)
-            .map(|value| value.unbind())
-            .map_py_err()
+        to_py_any(py, &result)
     }
 }
 
@@ -142,9 +138,7 @@ fn evaluate_batch_strict(
     contexts_json: Vec<String>,
 ) -> PyResult<Py<PyAny>> {
     let result = core_evaluate_batch_strict(rule_json, &contexts_json).map_py_err()?;
-    pythonize(py, &result)
-        .map(|value| value.unbind())
-        .map_py_err()
+    to_py_any(py, &result)
 }
 
 #[pyfunction]
